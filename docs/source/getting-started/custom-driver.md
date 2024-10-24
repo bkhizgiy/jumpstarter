@@ -60,7 +60,7 @@ class CustomClient(DriverClient):
         """
         Execute the `ls` command on the exporter host.
         """
-        # Using execute method to call the expoter side
+        # Using execute method to call the exporter side
         return self.execute("ls", [])
 
     def rm(self, files: list[str]) -> str:
