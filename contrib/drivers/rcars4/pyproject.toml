@@ -1,0 +1,37 @@
+[project]
+name = "jumpstarter-driver-rcars4"
+dynamic = ["version", "urls"]
+description = "rcars4"
+readme = "README.md"
+requires-python = ">=3.12.3"
+dependencies = [
+    "jumpstarter",
+    "jumpstarter_driver_tftp",
+    "jumpstarter_driver_http",
+    "jumpstarter_driver_raspberrypi",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.3",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.hatch.metadata.hooks.vcs.urls]
+Homepage = "https://jumpstarter.dev"
+source_archive = "https://github.com/jumpstarter-dev/repo/archive/{commit_hash}.zip"
+
+[tool.hatch.version]
+source = "vcs"
+raw-options = { 'root' = '../../../'}
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+jumpstarter-driver-tftp = { workspace = true }
+jumpstarter-driver-http = { workspace = true }
+jumpstarter-driver-raspberrypi = { workspace = true }
