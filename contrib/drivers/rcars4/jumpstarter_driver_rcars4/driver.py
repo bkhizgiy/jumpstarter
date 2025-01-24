@@ -18,6 +18,8 @@ class RCarSetup(CompositeInterface, Driver):
         super().__post_init__()
         if "serial" not in self.children:
             self.children["serial"] = PySerial(url="/dev/ttyUSB0", baudrate=1843200)
+        logger.info("the default state is powered off")
+        self.children["gpio"].off()
 
     @export
     def power_cycle(self) -> dict:

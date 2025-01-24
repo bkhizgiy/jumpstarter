@@ -36,10 +36,9 @@ class RCarSetupClient(CompositeClient, DriverClient):
             logger.info(f"File {os_image_name} already exists on HTTP server")
 
         try:
-            #self.call("power_cycle")
-            logger.info("long power cycle....")
+            logger.info("power cycle....")
             self.gpio.off()
-            time.sleep(30)
+            time.sleep(3)
             self.gpio.on()
             with PexpectAdapter(client=self.children["serial"]) as console:
                 console.logfile = sys.stdout.buffer
@@ -61,18 +60,30 @@ class RCarSetupClient(CompositeClient, DriverClient):
                 gateway = console.match.group(1).decode('utf-8')
                 console.expect("=>")
 
-                tftp_host = self.children["tftp"].get_host()
+                boot_tftp = ""
+                if kernel.endswith(".lzma"):
+                    boot_tftp = (
+                        "nfs ${fdtaddr} /root/bzlotnik/nfs/${fdtfile}; "
+                        "nfs ${ramdiskaddr} /root/bzlotnik/nfs/${bootfile}; "
+                        "lzmadec ${ramdiskaddr} ${loadaddr}; "
+                        "nfs ${ramdiskaddr} /root/bzlotnik/nfs/${ramdiskfile}; "
+                        "booti ${loadaddr} ${ramdiskaddr} ${fdtaddr}"
+                    )
+                else:
+                    boot_tftp = (
+                        "tftp ${fdtaddr} ${fdtfile}; "
+                        "tftp ${loadaddr} ${bootfile}; "
+                        "tftp ${ramdiskaddr} ${ramdiskfile}; "
+                        "booti ${loadaddr} ${ramdiskaddr} ${fdtaddr}"
+                    )
+
+                tftp_host = self.tftp.get_host()
                 env_vars = {
                     "ipaddr": ip_address,
                     "serverip": tftp_host,
                     "fdtaddr": "0x48000000",
                     "ramdiskaddr": "0x48080000",
-                    "boot_tftp": (
-                        "tftp ${fdtaddr} ${fdtfile}; "
-                        "tftp ${loadaddr} ${bootfile}; "
-                        "tftp ${ramdiskaddr} ${ramdiskfile}; "
-                        "booti ${loadaddr} ${ramdiskaddr} ${fdtaddr}"
-                    ),
+                    "boot_tftp": boot_tftp,
                     "bootfile": Path(kernel).name,
                     "fdtfile": Path(dtb).name,
                     "ramdiskfile": Path(initramfs).name
@@ -106,6 +117,8 @@ class RCarSetupClient(CompositeClient, DriverClient):
                 console.expect(r"\d+ bytes \(.+?\) copied, [0-9.]+ seconds, .+?", timeout=600)
                 console.expect("/ #")
 
+                console.sendline("sync")
+                console.expect("/ #")
                 self.call("power_cycle")
 
                 logger.info("Waiting for reboot...")
@@ -146,6 +159,7 @@ class RCarSetupClient(CompositeClient, DriverClient):
 
                 logger.info("Performing final boot...")
                 console.sendline("boot")
+                console.sendline("boot") # second time just in case
                 console.expect("login:", timeout=300)
                 console.sendline("root")
                 console.expect("Password:")
