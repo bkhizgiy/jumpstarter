@@ -3,8 +3,8 @@ import logging
 import time
 
 from jumpstarter.driver import Driver, export
-from jumpstarter.drivers.composite.driver import CompositeInterface
-from jumpstarter.drivers.pyserial.driver import PySerial
+from jumpstarter_driver_composite.driver import CompositeInterface
+from jumpstarter_driver_pyserial.driver import PySerial
 
 logger = logging.getLogger(__name__)
 

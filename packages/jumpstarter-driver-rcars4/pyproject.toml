@@ -1,15 +1,17 @@
 [project]
 name = "jumpstarter-driver-rcars4"
 dynamic = ["version", "urls"]
-description = "rcars4"
+description = "Renesas CAR S4 support for Jumpstarter"
 readme = "README.md"
-requires-python = ">=3.12.3"
 dependencies = [
     "jumpstarter",
-    "jumpstarter_driver_tftp",
-    "jumpstarter_driver_http",
-    "jumpstarter_driver_raspberrypi",
+    "jumpstarter-driver-tftp",
+    "jumpstarter-driver-http",
+    "jumpstarter-driver-raspberrypi",
 ]
+
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
 
 [project.optional-dependencies]
 dev = [
@@ -25,7 +27,7 @@ source_archive = "https://github.com/jumpstarter-dev/repo/archive/{commit_hash}.
 
 [tool.hatch.version]
 source = "vcs"
-raw-options = { 'root' = '../../../'}
+raw-options = { 'root' = '../../'}
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

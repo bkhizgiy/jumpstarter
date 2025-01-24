@@ -6,8 +6,8 @@ import sys
 import time
 
 from jumpstarter.client import DriverClient
-from jumpstarter.drivers.composite.client import CompositeClient
-from jumpstarter.client.adapters import PexpectAdapter
+from jumpstarter_driver_composite.client import CompositeClient
+from jumpstarter_driver_network.adapters import PexpectAdapter
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
