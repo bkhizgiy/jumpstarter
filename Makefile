@@ -29,6 +29,7 @@ clean-test:
 	-rm .coverage
 	-rm coverage.xml
 	-rm -rf htmlcov
+	-rm -rf .pytest_cache
 
 sync:
 	uv sync --all-packages --all-extras
