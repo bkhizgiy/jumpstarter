@@ -25,10 +25,4 @@ class SNMPServerClient(PowerClient):
         for cmd in super().cli().commands.values():
             snmp.add_command(cmd)
 
-        @snmp.command()
-        def cycle():
-            """Power cycle the device"""
-            result = self.cycle()
-            click.echo(result)
-
         return snmp
