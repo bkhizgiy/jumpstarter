@@ -8,21 +8,20 @@ from jumpstarter.client import DriverClient
 
 
 class PowerClient(DriverClient):
-    def on(self) -> str:
-        return self.call("on")
+    def on(self):
+        self.call("on")
 
-    def off(self) -> str:
-        return self.call("off")
+    def off(self):
+        self.call("off")
 
-    def cycle(self, quiescent_period: int = 2) -> str:
+    def cycle(self, wait: int = 2):
         """Power cycle the device"""
         self.logger.info("Starting power cycle sequence")
         self.off()
-        self.logger.info(f"Waiting {quiescent_period} seconds...")
-        time.sleep(quiescent_period)
+        self.logger.info(f"Waiting {wait} seconds...")
+        time.sleep(wait)
         self.on()
         self.logger.info("Power cycle sequence complete")
-        return "Power cycled"
 
     def read(self) -> Generator[PowerReading, None, None]:
         for v in self.streamingcall("read"):
@@ -37,17 +36,19 @@ class PowerClient(DriverClient):
         @base.command()
         def on():
             """Power on"""
-            click.echo(self.on())
+            self.on()
+            click.echo("Powered on")
 
         @base.command()
         def off():
             """Power off"""
-            click.echo(self.off())
+            self.off()
+            click.echo("Powered off")
 
         @base.command()
         @click.option('--wait', '-w', default=2, help='Wait time in seconds between off and on')
         def cycle(wait):
             """Power cycle"""
-            click.echo(self.cycle(wait))
-
+            click.echo(f"Power cycling with {wait} seconds wait time...")
+            self.cycle(wait)
         return base

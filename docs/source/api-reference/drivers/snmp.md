@@ -53,11 +53,11 @@ Turn power off for the configured outlet.
 Returns:
 - str: Confirmation message
 
-#### cycle(quiescent_period: int = 2)
+#### cycle(wait: int = 2)
 Power cycle the device with a configurable wait period between off and on states.
 
 Parameters:
-- quiescent_period: Time to wait in seconds between power off and power on
+- wait: Time to wait in seconds between power off and power on
 
 Returns:
 - str: Confirmation message
@@ -66,7 +66,7 @@ Returns:
 
 Power cycling a device:
 ```python
-snmp_client.cycle(quiescent_period=3)
+snmp_client.cycle(wait=3)
 ```
 
 Basic power control:

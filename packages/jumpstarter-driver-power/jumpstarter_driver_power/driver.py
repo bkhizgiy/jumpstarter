@@ -11,23 +11,27 @@ class PowerInterface(metaclass=ABCMeta):
         return "jumpstarter_driver_power.client.PowerClient"
 
     @abstractmethod
-    async def on(self) -> str: ...
+    async def on(self): ...
 
     @abstractmethod
-    async def off(self) -> str: ...
+    async def off(self): ...
 
     @abstractmethod
     async def read(self) -> AsyncGenerator[PowerReading, None]: ...
 
 
 class MockPower(PowerInterface, Driver):
-    @export
-    async def on(self) -> str:
-        return "ok"
+    def __init__(self, children=None):
+        self._power_state = None
+        super().__init__()
 
     @export
-    async def off(self) -> str:
-        return "ok"
+    async def on(self):
+        self._power_state = "on"
+
+    @export
+    async def off(self):
+        self._power_state = "off"
 
     @export
     async def read(self) -> AsyncGenerator[PowerReading, None]:
@@ -36,13 +40,17 @@ class MockPower(PowerInterface, Driver):
 
 
 class SyncMockPower(PowerInterface, Driver):
-    @export
-    def on(self) -> str:
-        return "ok"
+    def __init__(self, children=None):
+        self._power_state = None
+        super().__init__()
 
     @export
-    def off(self) -> str:
-        return "ok"
+    def on(self):
+        self._power_state = "on"
+
+    @export
+    def off(self):
+        self._power_state = "off"
 
     @export
     def read(self) -> Generator[PowerReading, None]:

@@ -9,8 +9,11 @@ pytestmark = pytest.mark.anyio
 async def test_driver_mock_power():
     driver = MockPower()
 
-    assert await driver.on() == "ok"
-    assert await driver.off() == "ok"
+    await driver.on()
+    assert driver._power_state == "on"
+
+    await driver.off()
+    assert driver._power_state == "off"
 
     assert [v async for v in driver.read()] == [
         PowerReading(voltage=0.0, current=0.0),
@@ -21,8 +24,11 @@ async def test_driver_mock_power():
 def test_driver_sync_mock_power():
     driver = SyncMockPower()
 
-    assert driver.on() == "ok"
-    assert driver.off() == "ok"
+    driver.on()
+    assert driver._power_state == "on"
+
+    driver.off()
+    assert driver._power_state == "off"
 
     assert list(driver.read()) == [
         PowerReading(voltage=0.0, current=0.0),

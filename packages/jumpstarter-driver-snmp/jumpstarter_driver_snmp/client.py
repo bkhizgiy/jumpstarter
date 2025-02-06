@@ -8,13 +8,13 @@ from jumpstarter_driver_power.client import PowerClient
 class SNMPServerClient(PowerClient):
     """Client interface for SNMP Power Control"""
 
-    def on(self) -> str:
+    def on(self):
         """Turn power on"""
-        return self.call("on")
+        self.call("on")
 
-    def off(self) -> str:
+    def off(self):
         """Turn power off"""
-        return self.call("off")
+        self.call("off")
 
     def cli(self):
         @click.group()
