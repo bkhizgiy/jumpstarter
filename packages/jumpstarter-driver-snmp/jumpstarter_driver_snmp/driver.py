@@ -1,6 +1,5 @@
 import asyncio
 import socket
-import time
 from dataclasses import dataclass, field
 from enum import IntEnum
 
@@ -30,6 +29,10 @@ class SNMPServer(Driver):
     timeout: int = 3
     plug: int = field()
     oid: str = field(default="1.3.6.1.4.1.13742.6.4.1.2.1.2.1")
+    auth_protocol: str = field(default=None)  # 'MD5' or 'SHA'
+    auth_key: str = field(default=None)
+    priv_protocol: str = field(default=None)  # 'DES' or 'AES'
+    priv_key: str = field(default=None)
 
     def __post_init__(self):
         if hasattr(super(), "__post_init__"):
@@ -37,7 +40,7 @@ class SNMPServer(Driver):
 
         try:
             self.ip_address = socket.gethostbyname(self.host)
-            self.logger.info(f"Resolved {self.host} to {self.ip_address}")
+            self.logger.debug(f"Resolved {self.host} to {self.ip_address}")
         except socket.gaierror as e:
             raise SNMPError(f"Failed to resolve hostname {self.host}: {e}") from e
 
@@ -45,26 +48,51 @@ class SNMPServer(Driver):
 
     def _setup_snmp(self):
         try:
-            # TODO: switch to anyio?
             asyncio.get_running_loop()
         except RuntimeError:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-
         snmp_engine = engine.SnmpEngine()
 
-        config.add_v3_user(
-            snmp_engine,
-            self.user,
-            config.USM_AUTH_NONE,
-            None
-        )
+        if self.auth_protocol and self.auth_key:
+            if self.priv_protocol and self.priv_key:
+                security_level = 'authPriv'
+                auth_protocol = getattr(config, f'usmHMAC{self.auth_protocol}AuthProtocol')
+                priv_protocol = getattr(config, f'usmPriv{self.priv_protocol}Protocol')
+
+                config.add_v3_user(
+                    snmp_engine,
+                    self.user,
+                    auth_protocol,
+                    self.auth_key,
+                    priv_protocol,
+                    self.priv_key
+                )
+            else:
+                security_level = 'authNoPriv'
+                auth_protocol = getattr(config, f'usmHMAC{self.auth_protocol}AuthProtocol')
+
+                config.add_v3_user(
+                    snmp_engine,
+                    self.user,
+                    auth_protocol,
+                    self.auth_key
+                )
+        else:
+            security_level = 'noAuthNoPriv'
+            config.add_v3_user(
+                snmp_engine,
+                self.user,
+                config.USM_AUTH_NONE,
+                None
+            )
+
         config.add_target_parameters(
             snmp_engine,
             "my-creds",
             self.user,
-            "noAuthNoPriv"
+            security_level
         )
 
         config.add_transport(
@@ -92,12 +120,12 @@ class SNMPServer(Driver):
 
         def callback(snmpEngine, sendRequestHandle, errorIndication,
                     errorStatus, errorIndex, varBinds, cbCtx):
-            self.logger.info(f"Callback {errorIndication} {errorStatus} {errorIndex} {varBinds}")
+            self.logger.debug(f"Callback {errorIndication} {errorStatus} {errorIndex} {varBinds}")
             if errorIndication:
-                self.logger.info(f"SNMP error: {errorIndication}")
+                self.logger.error(f"SNMP error: {errorIndication}")
                 result["error"] = f"SNMP error: {errorIndication}"
             elif errorStatus:
-                self.logger.info(f"SNMP status: {errorStatus}")
+                self.logger.error(f"SNMP status: {errorStatus}")
                 result["error"] = (
                     f"SNMP error: {errorStatus.prettyPrint()} at "
                     f"{varBinds[int(errorIndex) - 1][0] if errorIndex else '?'}"
@@ -106,7 +134,7 @@ class SNMPServer(Driver):
                 result["success"] = True
                 for oid, val in varBinds:
                     self.logger.debug(f"{oid.prettyPrint()} = {val.prettyPrint()}")
-            self.logger.info(f"SNMP set result: {result}")
+            self.logger.debug(f"SNMP set result: {result}")
 
         try:
             self.logger.info(f"Sending power {state.name} command to {self.host}")
@@ -136,29 +164,14 @@ class SNMPServer(Driver):
             raise SNMPError(error_msg) from e
 
     @export
-    def power_on(self):
+    def on(self):
         """Turn power on"""
         return self._snmp_set(PowerState.ON)
 
     @export
-    def power_off(self):
+    def off(self):
         """Turn power off"""
         return self._snmp_set(PowerState.OFF)
-
-    @export
-    def power_cycle(self):
-        """Power cycle the device"""
-        try:
-            self.logger.info("Starting power cycle sequence")
-            self.power_off()
-            self.logger.info(f"Waiting {self.quiescent_period} seconds...")
-            time.sleep(self.quiescent_period)
-            self.power_on()
-            return "Power cycle completed successfully"
-        except Exception as e:
-            error_msg = f"Power cycle failed: {str(e)}"
-            self.logger.error(error_msg)
-            raise SNMPError(error_msg) from e
 
     def close(self):
         """No cleanup needed since engines are created per operation"""

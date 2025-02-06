@@ -1,25 +1,20 @@
 from dataclasses import dataclass
 
 import asyncclick as click
-
-from jumpstarter.client import DriverClient
+from jumpstarter_driver_power.client import PowerClient
 
 
 @dataclass(kw_only=True)
-class SNMPServerClient(DriverClient):
+class SNMPServerClient(PowerClient):
     """Client interface for SNMP Power Control"""
 
-    def power_on(self):
+    def on(self) -> str:
         """Turn power on"""
-        return self.call("power_on")
+        return self.call("on")
 
-    def power_off(self):
+    def off(self) -> str:
         """Turn power off"""
-        return self.call("power_off")
-
-    def power_cycle(self):
-        """Power cycle the device"""
-        return self.call("power_cycle")
+        return self.call("off")
 
     def cli(self):
         @click.group()
@@ -27,22 +22,13 @@ class SNMPServerClient(DriverClient):
             """SNMP power control commands"""
             pass
 
-        @snmp.command()
-        def on():
-            """Turn power on"""
-            result = self.power_on()
-            click.echo(result)
-
-        @snmp.command()
-        def off():
-            """Turn power off"""
-            result = self.power_off()
-            click.echo(result)
+        for cmd in super().cli().commands.values():
+            snmp.add_command(cmd)
 
         @snmp.command()
         def cycle():
             """Power cycle the device"""
-            result = self.power_cycle()
+            result = self.cycle()
             click.echo(result)
 
         return snmp
