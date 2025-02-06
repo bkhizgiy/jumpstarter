@@ -1,7 +1,7 @@
 import asyncio
 import socket
 from dataclasses import dataclass, field
-from enum import IntEnum
+from enum import Enum, IntEnum
 
 from pysnmp.carrier.asyncio.dgram import udp
 from pysnmp.entity import config, engine
@@ -10,6 +10,16 @@ from pysnmp.proto import rfc1902
 
 from jumpstarter.driver import Driver, export
 
+
+class AuthProtocol(str, Enum):
+    NONE = "NONE"
+    MD5 = "MD5"
+    SHA = "SHA"
+
+class PrivProtocol(str, Enum):
+    NONE = "NONE"
+    DES = "DES"
+    AES = "AES"
 
 class PowerState(IntEnum):
     OFF = 0
@@ -25,14 +35,13 @@ class SNMPServer(Driver):
     host: str = field()
     user: str = field()
     port: int = field(default=161)
-    quiescent_period: int = field(default=5)
-    timeout: int = 3
     plug: int = field()
     oid: str = field(default="1.3.6.1.4.1.13742.6.4.1.2.1.2.1")
-    auth_protocol: str = field(default=None)  # 'MD5' or 'SHA'
-    auth_key: str = field(default=None)
-    priv_protocol: str = field(default=None)  # 'DES' or 'AES'
-    priv_key: str = field(default=None)
+    auth_protocol: AuthProtocol = field(default=AuthProtocol.NONE)
+    auth_key: str | None = field(default=None)
+    priv_protocol: PrivProtocol = field(default=PrivProtocol.NONE)
+    priv_key: str | None = field(default=None)
+    timeout: float = field(default=5.0)
 
     def __post_init__(self):
         if hasattr(super(), "__post_init__"):
@@ -47,45 +56,54 @@ class SNMPServer(Driver):
         self.full_oid = tuple(int(x) for x in self.oid.split('.')) + (self.plug,)
 
     def _setup_snmp(self):
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
         snmp_engine = engine.SnmpEngine()
 
-        if self.auth_protocol and self.auth_key:
-            if self.priv_protocol and self.priv_key:
-                security_level = 'authPriv'
-                auth_protocol = getattr(config, f'usmHMAC{self.auth_protocol}AuthProtocol')
-                priv_protocol = getattr(config, f'usmPriv{self.priv_protocol}Protocol')
+        AUTH_PROTOCOLS = {
+            AuthProtocol.NONE: config.USM_AUTH_NONE,
+            AuthProtocol.MD5: config.USM_AUTH_HMAC96_MD5,
+            AuthProtocol.SHA: config.USM_AUTH_HMAC96_SHA,
+        }
 
-                config.add_v3_user(
-                    snmp_engine,
-                    self.user,
-                    auth_protocol,
-                    self.auth_key,
-                    priv_protocol,
-                    self.priv_key
-                )
-            else:
-                security_level = 'authNoPriv'
-                auth_protocol = getattr(config, f'usmHMAC{self.auth_protocol}AuthProtocol')
+        PRIV_PROTOCOLS = {
+            PrivProtocol.NONE: config.USM_PRIV_NONE,
+            PrivProtocol.DES: config. USM_PRIV_CBC56_DES,
+            PrivProtocol.AES: config.USM_PRIV_CFB128_AES,
+        }
 
-                config.add_v3_user(
-                    snmp_engine,
-                    self.user,
-                    auth_protocol,
-                    self.auth_key
-                )
+        auth_protocol = AUTH_PROTOCOLS[self.auth_protocol]
+        priv_protocol = PRIV_PROTOCOLS[self.priv_protocol]
+
+        if self.auth_protocol == AuthProtocol.NONE:
+            security_level = "noAuthNoPriv"
+        elif self.priv_protocol == PrivProtocol.NONE:
+            security_level = "authNoPriv"
         else:
-            security_level = 'noAuthNoPriv'
+            security_level = "authPriv"
+
+        if security_level == "noAuthNoPriv":
+            config.add_v3_user(
+                snmp_engine,
+                self.user
+            )
+        elif security_level == "authNoPriv":
+            if not self.auth_key:
+                raise SNMPError("Authentication key required when auth_protocol is specified")
             config.add_v3_user(
                 snmp_engine,
                 self.user,
-                config.USM_AUTH_NONE,
-                None
+                auth_protocol,
+                self.auth_key
+            )
+        else:
+            if not self.auth_key or not self.priv_key:
+                raise SNMPError("Both auth_key and priv_key required for authenticated privacy")
+            config.add_v3_user(
+                snmp_engine,
+                self.user,
+                auth_protocol,
+                self.auth_key,
+                priv_protocol,
+                self.priv_key
             )
 
         config.add_target_parameters(
@@ -95,18 +113,19 @@ class SNMPServer(Driver):
             security_level
         )
 
-        config.add_transport(
-            snmp_engine,
-            udp.DOMAIN_NAME,
-            udp.UdpAsyncioTransport().open_client_mode()
-        )
-
         config.add_target_address(
             snmp_engine,
             "my-target",
             udp.DOMAIN_NAME,
             (self.ip_address, self.port),
-            "my-creds"
+            "my-creds",
+            timeout=int(self.timeout * 100),
+        )
+
+        config.add_transport(
+            snmp_engine,
+            udp.DOMAIN_NAME,
+            udp.UdpAsyncioTransport().open_client_mode()
         )
 
         return snmp_engine
@@ -138,6 +157,11 @@ class SNMPServer(Driver):
 
         try:
             self.logger.info(f"Sending power {state.name} command to {self.host}")
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
 
             snmp_engine = self._setup_snmp()
 
