@@ -157,11 +157,14 @@ class SNMPServer(Driver):
 
         try:
             self.logger.info(f"Sending power {state.name} command to {self.host}")
+            created_loop = False
+
             try:
                 asyncio.get_running_loop()
             except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
+              loop = asyncio.new_event_loop()
+              asyncio.set_event_loop(loop)
+              created_loop = True
 
             snmp_engine = self._setup_snmp()
 
@@ -186,6 +189,9 @@ class SNMPServer(Driver):
             error_msg = f"SNMP set failed: {str(e)}"
             self.logger.error(error_msg)
             raise SNMPError(error_msg) from e
+        finally:
+            if created_loop:
+                loop.close()
 
     @export
     def on(self):
