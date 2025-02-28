@@ -80,14 +80,16 @@ class DriverClient(AsyncDriverClient):
         with self.portal.wrap_async_context_manager(self.log_stream_async()):
             yield
 
-    def open_stream(self) -> BlockingStream:
+    def open_stream(self, method="connect") -> BlockingStream:
         """
         Open a blocking stream session without a context manager.
+
+        :param str method: method name of streaming driver call
 
         :return: blocking stream session object.
         :rtype: BlockingStream
         """
-        return self.stack.enter_context(self.stream())
+        return self.stack.enter_context(self.stream(method))
 
     def close(self):
         """
