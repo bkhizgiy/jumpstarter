@@ -7,7 +7,6 @@ members = [
     "jumpstarter",
     "jumpstarter-all",
     "jumpstarter-cli",
-    "jumpstarter-cli-admin",
     "jumpstarter-cli-client",
     "jumpstarter-cli-common",
     "jumpstarter-cli-driver",
@@ -1018,41 +1017,10 @@ requires-dist = [
 name = "jumpstarter-cli"
 source = { editable = "packages/jumpstarter-cli" }
 dependencies = [
-    { name = "jumpstarter-cli-admin" },
     { name = "jumpstarter-cli-client" },
+    { name = "jumpstarter-cli-common" },
     { name = "jumpstarter-cli-driver" },
     { name = "jumpstarter-cli-exporter" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-anyio" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "jumpstarter-cli-admin", editable = "packages/jumpstarter-cli-admin" },
-    { name = "jumpstarter-cli-client", editable = "packages/jumpstarter-cli-client" },
-    { name = "jumpstarter-cli-driver", editable = "packages/jumpstarter-cli-driver" },
-    { name = "jumpstarter-cli-exporter", editable = "packages/jumpstarter-cli-exporter" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=8.3.2" },
-    { name = "pytest-anyio", specifier = ">=0.0.0" },
-    { name = "pytest-asyncio", specifier = ">=0.0.0" },
-    { name = "pytest-cov", specifier = ">=5.0.0" },
-]
-
-[[package]]
-name = "jumpstarter-cli-admin"
-source = { editable = "packages/jumpstarter-cli-admin" }
-dependencies = [
-    { name = "jumpstarter-cli-common" },
     { name = "jumpstarter-kubernetes" },
 ]
 
@@ -1066,7 +1034,10 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "jumpstarter-cli-client", editable = "packages/jumpstarter-cli-client" },
     { name = "jumpstarter-cli-common", editable = "packages/jumpstarter-cli-common" },
+    { name = "jumpstarter-cli-driver", editable = "packages/jumpstarter-cli-driver" },
+    { name = "jumpstarter-cli-exporter", editable = "packages/jumpstarter-cli-exporter" },
     { name = "jumpstarter-kubernetes", editable = "packages/jumpstarter-kubernetes" },
 ]
 
@@ -1112,6 +1083,7 @@ dependencies = [
     { name = "authlib" },
     { name = "joserfc" },
     { name = "jumpstarter" },
+    { name = "kubernetes-asyncio" },
     { name = "pydantic" },
     { name = "truststore" },
     { name = "yarl" },
@@ -1131,6 +1103,7 @@ requires-dist = [
     { name = "authlib", specifier = ">=1.4.1" },
     { name = "joserfc", specifier = ">=1.0.3" },
     { name = "jumpstarter", editable = "packages/jumpstarter" },
+    { name = "kubernetes-asyncio" },
     { name = "pydantic", specifier = ">=2.8.2" },
     { name = "truststore", specifier = ">=0.10.1" },
     { name = "yarl", specifier = ">=1.18.3" },

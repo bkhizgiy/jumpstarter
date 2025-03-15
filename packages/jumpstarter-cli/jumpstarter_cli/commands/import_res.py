@@ -9,14 +9,9 @@ from jumpstarter_cli_common import (
     opt_nointeractive,
     opt_output_path_only,
 )
+from jumpstarter_cli_common.exceptions import async_handle_k8s_exceptions
 from jumpstarter_kubernetes import ClientsV1Alpha1Api, ExportersV1Alpha1Api
-from kubernetes_asyncio.client.exceptions import ApiException
-from kubernetes_asyncio.config.config_exception import ConfigException
 
-from .k8s import (
-    handle_k8s_api_exception,
-    handle_k8s_config_exception,
-)
 from jumpstarter.config import (
     ClientConfigV1Alpha1,
     UserConfigV1Alpha1,
@@ -49,6 +44,7 @@ def import_res():
 @opt_context
 @opt_output_path_only
 @opt_nointeractive
+@async_handle_k8s_exceptions
 async def import_client(
     name: str,
     namespace: str,
@@ -64,32 +60,27 @@ async def import_client(
     # Check that a client config with the same name does not exist
     if out is None and ClientConfigV1Alpha1.exists(name):
         raise click.ClickException(f"A client with the name '{name}' already exists")
-    try:
-        async with ClientsV1Alpha1Api(namespace, kubeconfig, context) as api:
-            if unsafe is False and allow is None and nointeractive is False:
-                unsafe = click.confirm("Allow unsafe driver client imports?")
-                if unsafe is False:
-                    allow = click.prompt(
-                        "Enter a comma-separated list of allowed driver packages (optional)", default="", type=str
-                    )
-            if output is None:
-                click.echo("Fetching client credentials from cluster")
-            allow_drivers = allow.split(",") if allow is not None and len(allow) > 0 else []
-            client_config = await api.get_client_config(name, allow=allow_drivers, unsafe=unsafe)
-            config_path = ClientConfigV1Alpha1.save(client_config, out)
-            # If this is the only client config, set it as default
-            if out is None and len(ClientConfigV1Alpha1.list()) == 1:
-                user_config = UserConfigV1Alpha1.load_or_create()
-                user_config.config.current_client = client_config
-                UserConfigV1Alpha1.save(user_config)
-            if output is None:
-                click.echo(f"Client configuration successfully saved to {config_path}")
-            else:
-                click.echo(config_path)
-    except ApiException as e:
-        handle_k8s_api_exception(e)
-    except ConfigException as e:
-        handle_k8s_config_exception(e)
+    async with ClientsV1Alpha1Api(namespace, kubeconfig, context) as api:
+        if unsafe is False and allow is None and nointeractive is False:
+            unsafe = click.confirm("Allow unsafe driver client imports?")
+            if unsafe is False:
+                allow = click.prompt(
+                    "Enter a comma-separated list of allowed driver packages (optional)", default="", type=str
+                )
+        if output is None:
+            click.echo("Fetching client credentials from cluster")
+        allow_drivers = allow.split(",") if allow is not None and len(allow) > 0 else []
+        client_config = await api.get_client_config(name, allow=allow_drivers, unsafe=unsafe)
+        config_path = ClientConfigV1Alpha1.save(client_config, out)
+        # If this is the only client config, set it as default
+        if out is None and len(ClientConfigV1Alpha1.list()) == 1:
+            user_config = UserConfigV1Alpha1.load_or_create()
+            user_config.config.current_client = client_config
+            UserConfigV1Alpha1.save(user_config)
+        if output is None:
+            click.echo(f"Client configuration successfully saved to {config_path}")
+        else:
+            click.echo(config_path)
 
 
 @import_res.command("exporter")
@@ -104,6 +95,7 @@ async def import_client(
 @opt_context
 @opt_output_path_only
 @opt_nointeractive
+@async_handle_k8s_exceptions
 async def import_exporter(
     name: str,
     namespace: str,
@@ -120,17 +112,12 @@ async def import_exporter(
         pass
     else:
         raise click.ClickException(f'An exporter with the name "{name}" already exists')
-    try:
-        async with ExportersV1Alpha1Api(namespace, kubeconfig, context) as api:
-            if output is None:
-                click.echo("Fetching exporter credentials from cluster")
-            exporter_config = await api.get_exporter_config(name)
-            config_path = ExporterConfigV1Alpha1.save(exporter_config, out)
-            if output is None:
-                click.echo(f"Exporter configuration successfully saved to {config_path}")
-            else:
-                click.echo(config_path)
-    except ApiException as e:
-        handle_k8s_api_exception(e)
-    except ConfigException as e:
-        handle_k8s_config_exception(e)
+    async with ExportersV1Alpha1Api(namespace, kubeconfig, context) as api:
+        if output is None:
+            click.echo("Fetching exporter credentials from cluster")
+        exporter_config = await api.get_exporter_config(name)
+        config_path = ExporterConfigV1Alpha1.save(exporter_config, out)
+        if output is None:
+            click.echo(f"Exporter configuration successfully saved to {config_path}")
+        else:
+            click.echo(config_path)
