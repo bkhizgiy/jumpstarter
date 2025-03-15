@@ -11,6 +11,8 @@ readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11"
 dependencies = [
+  "jumpstarter-cli-common",
+  "jumpstarter-kubernetes",
   "jumpstarter-cli-admin",
   "jumpstarter-cli-client",
   "jumpstarter-cli-driver",
