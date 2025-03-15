@@ -1,4 +1,5 @@
 from .alias import AliasedGroup
+from .arg import arg_alias
 from .opt import (
     NameOutputType,
     OutputMode,
@@ -21,6 +22,7 @@ from .version import get_client_version, version
 __all__ = [
     "AliasedGroup",
     "make_table",
+    "arg_alias",
     "opt_context",
     "opt_log_level",
     "opt_kubeconfig",

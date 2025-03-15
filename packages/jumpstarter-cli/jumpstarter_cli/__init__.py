@@ -4,7 +4,7 @@ from jumpstarter_cli_common import AliasedGroup, version
 from jumpstarter_cli_driver import driver
 from jumpstarter_cli_exporter import exporter
 
-from .commands import create, delete, get, import_res, install
+from .commands import config, create, delete, get, import_res, install
 
 
 @click.group(cls=AliasedGroup)
@@ -12,6 +12,7 @@ def jmp():
     """The Jumpstarter CLI"""
 
 
+jmp.add_command(config)
 jmp.add_command(create)
 jmp.add_command(delete)
 jmp.add_command(get)

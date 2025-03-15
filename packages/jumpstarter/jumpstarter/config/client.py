@@ -232,6 +232,10 @@ class ClientConfigV1Alpha1(BaseModel):
         return yaml.safe_dump(config.model_dump(mode="json", exclude={"path", "alias"}), sort_keys=False)
 
     @classmethod
+    def dump_json(cls, config: Self) -> str:
+        return config.model_dump_json(exclude={"path", "alias"}, indent=4)
+
+    @classmethod
     def exists(cls, alias: str) -> bool:
         """Check if a client config exists by alias."""
         return cls._get_path(alias).exists()
