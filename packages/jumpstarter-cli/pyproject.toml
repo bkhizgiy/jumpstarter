@@ -10,10 +10,7 @@ authors = [
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11"
-dependencies = [
-  "jumpstarter-cli-admin",
-  "jumpstarter-cli-driver",
-]
+dependencies = ["jumpstarter-cli-admin", "jumpstarter-cli-common"]
 
 [dependency-groups]
 dev = [

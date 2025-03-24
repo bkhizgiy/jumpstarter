@@ -3,12 +3,13 @@ from jumpstarter_cli_common import OutputMode, OutputType, make_table, opt_confi
 from jumpstarter_cli_common.exceptions import handle_exceptions
 
 from .common import opt_selector
+from jumpstarter.driver.repository import DriverPackageList, LocalDriverRepository
 
 
 @click.group()
 def get():
     """
-    Display one or many resources
+    Display one or many resources.
     """
 
 
@@ -75,3 +76,49 @@ def get_leases(config, selector: str | None, output: OutputType):
                 for lease in leases.leases
             ]
             click.echo(make_table(columns, rows))
+
+
+MAX_SUMMARY_LENGTH = 40
+
+
+def print_drivers(driver_packages: DriverPackageList, is_wide: bool):
+    if is_wide:
+        columns = ["NAME", "PACKAGE", "VERSION", "TYPE", "CATEGORIES", "LICENSE"]
+    else:
+        columns = ["NAME", "TYPE"]
+    driver_rows = []
+    for package in driver_packages.items:
+        for driver in package.drivers:
+            driver_rows.append(
+                {
+                    "NAME": driver.name,
+                    "PACKAGE": package.name,
+                    "VERSION": package.version,
+                    "TYPE": driver.type,
+                    "CATEGORIES": ",".join(package.categories),
+                    "LICENSE": package.license if package.license else "Unspecified",
+                }
+            )
+    click.echo(make_table(columns, driver_rows))
+
+
+@get.command("drivers")
+@opt_output_all
+@handle_exceptions
+async def get_drivers(output: OutputType):
+    """
+    Display all available drivers.
+    """
+    local_repo = LocalDriverRepository.from_venv()
+    local_drivers = local_repo.list_packages()
+    match output:
+        case OutputMode.JSON:
+            click.echo(local_drivers.dump_json())
+        case OutputMode.YAML:
+            click.echo(local_drivers.dump_yaml())
+        case OutputMode.NAME:
+            for package in local_drivers.items:
+                for driver in package.drivers:
+                    click.echo(f"driver.jumpstarter.dev/{package.name}/{driver.name}")
+        case _:
+            print_drivers(local_drivers, is_wide=output == OutputMode.WIDE)
