@@ -7,22 +7,9 @@ from pydantic import Field
 from jumpstarter.models import JsonBaseModel, ListBaseModel
 
 
-class DriverClient(JsonBaseModel):
+class DriverClientEntryPoint(JsonBaseModel):
     """
-    A Jumpstarter driver client class.
-    """
-
-    name: str
-    type: str
-
-    @staticmethod
-    def from_entry_point(ep: EntryPoint):
-        return DriverClient(name=ep.name, type=ep.value.replace(":", "."))
-
-
-class Driver(JsonBaseModel):
-    """
-    A Jumpstarter driver backend class.
+    A Jumpstarter driver client entry point.
     """
 
     name: str
@@ -30,7 +17,20 @@ class Driver(JsonBaseModel):
 
     @staticmethod
     def from_entry_point(ep: EntryPoint):
-        return Driver(name=ep.name, type=ep.value.replace(":", "."))
+        return DriverClientEntryPoint(name=ep.name, type=ep.value.replace(":", "."))
+
+
+class DriverEntryPoint(JsonBaseModel):
+    """
+    A Jumpstarter driver entry point.
+    """
+
+    name: str
+    type: str
+
+    @staticmethod
+    def from_entry_point(ep: EntryPoint):
+        return DriverEntryPoint(name=ep.name, type=ep.value.replace(":", "."))
 
 
 class DriverPackage(JsonBaseModel):
@@ -46,8 +46,8 @@ class DriverPackage(JsonBaseModel):
     summary: Optional[str] = None
     license: Optional[str] = None
 
-    clients: list[DriverClient] = []
-    drivers: list[Driver] = []
+    clients: list[DriverClientEntryPoint] = []
+    drivers: list[DriverEntryPoint] = []
 
     @staticmethod
     def requires_dist_to_categories(requires_dist: list[str]) -> list[str]:
@@ -89,7 +89,7 @@ class DriverPackageList(ListBaseModel[DriverPackage]):
     kind: Literal["DriverPackageList"] = Field(default="DriverPackageList")
 
 
-class DriverList(ListBaseModel[Driver]):
+class DriverList(ListBaseModel[DriverEntryPoint]):
     """
     A list of Jumpstarter driver list models.
     """
@@ -97,7 +97,7 @@ class DriverList(ListBaseModel[Driver]):
     kind: Literal["DriverList"] = Field(default="DriverList")
 
 
-class DriverClientList(ListBaseModel[Driver]):
+class DriverClientList(ListBaseModel[DriverEntryPoint]):
     """
     A list of Jumpstarter driver client classes.
     """
@@ -148,9 +148,9 @@ class LocalDriverRepository(DriverRepository):
                     driver_packages[package_id] = DriverPackage.from_entry_point(entry_point)
                 # Add the driver/client to the package
                 if is_driver:
-                    driver_packages[package_id].drivers.append(Driver.from_entry_point(entry_point))
+                    driver_packages[package_id].drivers.append(DriverEntryPoint.from_entry_point(entry_point))
                 else:
-                    driver_packages[package_id].clients.append(DriverClient.from_entry_point(entry_point))
+                    driver_packages[package_id].clients.append(DriverClientEntryPoint.from_entry_point(entry_point))
 
         # Process driver entry points
         _process_entry_points(LocalDriverRepository.DRIVER_ENTRY_POINT_GROUP, is_driver=True)
