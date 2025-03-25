@@ -122,3 +122,86 @@ async def get_drivers(output: OutputType):
                     click.echo(f"driver.jumpstarter.dev/{package.name}/{driver.name}")
         case _:
             print_drivers(local_drivers, is_wide=output == OutputMode.WIDE)
+
+
+def print_driver_clients(driver_packages: DriverPackageList, is_wide: bool):
+    if is_wide:
+        columns = ["NAME", "PACKAGE", "VERSION", "TYPE", "CATEGORIES", "LICENSE"]
+    else:
+        columns = ["NAME", "TYPE"]
+    driver_rows = []
+    for package in driver_packages.items:
+        for client in package.clients:
+            driver_rows.append(
+                {
+                    "NAME": client.name,
+                    "PACKAGE": package.name,
+                    "VERSION": package.version,
+                    "TYPE": client.type,
+                    "CATEGORIES": ",".join(package.categories),
+                    "LICENSE": package.license if package.license else "Unspecified",
+                }
+            )
+    click.echo(make_table(columns, driver_rows))
+
+
+@get.command("driver-clients")
+@opt_output_all
+@handle_exceptions
+async def get_driver_clients(output: OutputType):
+    """
+    Display all available driver clients.
+    """
+    local_repo = LocalDriverRepository.from_venv()
+    local_drivers = local_repo.list_packages()
+    match output:
+        case OutputMode.JSON:
+            click.echo(local_drivers.dump_json())
+        case OutputMode.YAML:
+            click.echo(local_drivers.dump_yaml())
+        case OutputMode.NAME:
+            for package in local_drivers.items:
+                for driver in package.drivers:
+                    click.echo(f"driver-client.jumpstarter.dev/{package.name}/{driver.name}")
+        case _:
+            print_driver_clients(local_drivers, is_wide=output == OutputMode.WIDE)
+
+
+def print_packages(local_drivers: DriverPackageList, is_wide: bool):
+    if is_wide:
+        columns = ["NAME", "VERSION", "LICENSE", "CATEGORIES"]
+    else:
+        columns = ["NAME", "VERSION", "LICENSE", "CATEGORIES"]
+    driver_rows = []
+    for package in local_drivers.items:
+        driver_rows.append(
+            {
+                "NAME": package.name,
+                "VERSION": package.version,
+                "CATEGORIES": ",".join(package.categories),
+                "LICENSE": package.license if package.license else "Unspecified",
+            }
+        )
+    click.echo(make_table(columns, driver_rows))
+
+
+@get.command("packages")
+@opt_output_all
+@handle_exceptions
+async def get_packages(output: OutputType):
+    """
+    Display all available jumpstarter driver packages.
+    """
+    local_repo = LocalDriverRepository.from_venv()
+    local_drivers = local_repo.list_packages()
+    match output:
+        case OutputMode.JSON:
+            click.echo(local_drivers.dump_json())
+        case OutputMode.YAML:
+            click.echo(local_drivers.dump_yaml())
+        case OutputMode.NAME:
+            for package in local_drivers.items:
+                for driver in package.drivers:
+                    click.echo(f"driver.jumpstarter.dev/{package.name}/{driver.name}")
+        case _:
+            print_packages(local_drivers, is_wide=output == OutputMode.WIDE)
