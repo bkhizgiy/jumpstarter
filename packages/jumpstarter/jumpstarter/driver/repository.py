@@ -71,8 +71,7 @@ class DriverPackage(JsonBaseModel):
         Create a `DriverPackage` from an `importlib.metadata.EntryPoint`.
         """
         return DriverPackage(
-            name=ep.name,
-            package=ep.dist.name,
+            name=ep.dist.name,
             type=ep.value.replace(":", "."),
             categories=DriverPackage.requires_dist_to_categories(ep.dist.metadata.get_all("Requires-Dist")),
             version=ep.dist.version,
