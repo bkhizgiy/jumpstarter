@@ -1,11 +1,13 @@
-from typing import Literal
+from typing import Generic, Literal, TypeVar
 
 from pydantic import Field
 
 from .model import JsonBaseModel
 
+T = TypeVar("T")
 
-class ListBaseModel[T](JsonBaseModel):
+
+class ListBaseModel(JsonBaseModel, Generic[T]):
     """
     A generic Pydantic list model result type.
 

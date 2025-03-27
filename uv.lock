@@ -9,6 +9,7 @@ members = [
     "jumpstarter-cli",
     "jumpstarter-cli-admin",
     "jumpstarter-cli-common",
+    "jumpstarter-cli-pkg",
     "jumpstarter-driver-can",
     "jumpstarter-driver-composite",
     "jumpstarter-driver-dutlink",
@@ -1019,6 +1020,7 @@ source = { editable = "packages/jumpstarter-cli" }
 dependencies = [
     { name = "jumpstarter-cli-admin" },
     { name = "jumpstarter-cli-common" },
+    { name = "jumpstarter-cli-pkg" },
 ]
 
 [package.dev-dependencies]
@@ -1033,6 +1035,7 @@ dev = [
 requires-dist = [
     { name = "jumpstarter-cli-admin", editable = "packages/jumpstarter-cli-admin" },
     { name = "jumpstarter-cli-common", editable = "packages/jumpstarter-cli-common" },
+    { name = "jumpstarter-cli-pkg", editable = "packages/jumpstarter-cli-pkg" },
 ]
 
 [package.metadata.requires-dev]
@@ -1104,6 +1107,32 @@ requires-dist = [
     { name = "truststore", specifier = ">=0.10.1" },
     { name = "yarl", specifier = ">=1.18.3" },
 ]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.3.2" },
+    { name = "pytest-anyio", specifier = ">=0.0.0" },
+    { name = "pytest-asyncio", specifier = ">=0.0.0" },
+    { name = "pytest-cov", specifier = ">=5.0.0" },
+]
+
+[[package]]
+name = "jumpstarter-cli-pkg"
+source = { editable = "packages/jumpstarter-cli-pkg" }
+dependencies = [
+    { name = "jumpstarter-cli-common" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-anyio" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "jumpstarter-cli-common", editable = "packages/jumpstarter-cli-common" }]
 
 [package.metadata.requires-dev]
 dev = [
