@@ -144,7 +144,7 @@ def print_adapters(packages: V1Alpha1DriverPackageList, output: OutputType):
 @opt_output_all
 @handle_exceptions
 def list(output: OutputType, drivers: bool, driver_clients: bool, adapters: bool):
-    """List Jumpstarter packages"""
+    """List available Jumpstarter packages."""
     # Add validation to ensure only one flag is set
     if sum([drivers, driver_clients, adapters]) > 1:
         raise click.UsageError("Only one of --drivers, --driver-clients, or --adapters can be specified.")
