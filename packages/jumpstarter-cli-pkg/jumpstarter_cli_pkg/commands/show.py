@@ -107,7 +107,7 @@ def print_package_details(
 @opt_output_all
 @click.option("--verbose", "-v", is_flag=True, help="Show verbose output.")
 @handle_exceptions
-def show(
+def show(  # noqa: C901
     package: str, drivers: bool, driver_clients: bool, adapters: bool, output: OutputType, inspect: bool, verbose: bool
 ):
     """
@@ -139,5 +139,7 @@ def show(
                 click.echo(local_package.adapters.dump_yaml())
             else:
                 click.echo(local_package.dump_yaml())
+        case OutputMode.NAME:
+            click.echo(f"package.jumpstarter.dev/{local_package.name}")
         case _:
             print_package_details(local_package, drivers, driver_clients, adapters, inspect, verbose)
