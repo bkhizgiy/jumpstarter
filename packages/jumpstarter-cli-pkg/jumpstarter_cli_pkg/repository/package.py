@@ -13,6 +13,8 @@ class V1Alpha1AdapterEntryPoint(JsonBaseModel):
     A Jumpstarter adapter entry point.
     """
 
+    _entry_point: EntryPoint
+
     api_version: Literal["jumpstarter.dev/v1alpha1"] = Field(default="jumpstarter.dev/v1alpha1", alias="apiVersion")
     kind: Literal["AdapterEntryPoint"] = Field(default="AdapterEntryPoint")
 
@@ -22,13 +24,17 @@ class V1Alpha1AdapterEntryPoint(JsonBaseModel):
 
     @staticmethod
     def from_entry_point(ep: EntryPoint):
-        return V1Alpha1AdapterEntryPoint(name=ep.name, type=ep.value.replace(":", "."), package=ep.dist.name)
+        return V1Alpha1AdapterEntryPoint(
+            _entry_point=ep, name=ep.name, type=ep.value.replace(":", "."), package=ep.dist.name
+        )
 
 
 class V1Alpha1DriverClientEntryPoint(JsonBaseModel):
     """
     A Jumpstarter driver client entry point.
     """
+
+    _entry_point: EntryPoint
 
     api_version: Literal["jumpstarter.dev/v1alpha1"] = Field(default="jumpstarter.dev/v1alpha1", alias="apiVersion")
     kind: Literal["DriverClientEntryPoint"] = Field(default="DriverClientEntryPoint")
@@ -39,13 +45,17 @@ class V1Alpha1DriverClientEntryPoint(JsonBaseModel):
 
     @staticmethod
     def from_entry_point(ep: EntryPoint):
-        return V1Alpha1DriverClientEntryPoint(name=ep.name, type=ep.value.replace(":", "."), package=ep.dist.name)
+        return V1Alpha1DriverClientEntryPoint(
+            _entry_point=ep, name=ep.name, type=ep.value.replace(":", "."), package=ep.dist.name
+        )
 
 
 class V1Alpha1DriverEntryPoint(JsonBaseModel):
     """
     A Jumpstarter driver entry point.
     """
+
+    _entry_point: EntryPoint
 
     api_version: Literal["jumpstarter.dev/v1alpha1"] = Field(default="jumpstarter.dev/v1alpha1", alias="apiVersion")
     kind: Literal["DriverEntryPoint"] = Field(default="DriverEntryPoint")
@@ -56,7 +66,9 @@ class V1Alpha1DriverEntryPoint(JsonBaseModel):
 
     @staticmethod
     def from_entry_point(ep: EntryPoint):
-        return V1Alpha1DriverEntryPoint(name=ep.name, type=ep.value.replace(":", "."), package=ep.dist.name)
+        return V1Alpha1DriverEntryPoint(
+            _entry_point=ep, name=ep.name, type=ep.value.replace(":", "."), package=ep.dist.name
+        )
 
 
 class V1Alpha1AdapterEntryPointList(ListBaseModel[V1Alpha1AdapterEntryPoint]):
@@ -87,6 +99,8 @@ class V1Alpha1DriverPackage(JsonBaseModel):
     """
     A Jumpstarter driver package.
     """
+
+    _distribution: Distribution
 
     api_version: Literal["jumpstarter.dev/v1alpha1"] = Field(default="jumpstarter.dev/v1alpha1", alias="apiVersion")
     kind: Literal["DriverPackage"] = Field(default="DriverPackage")
@@ -168,6 +182,7 @@ class V1Alpha1DriverPackage(JsonBaseModel):
             raise JumpstarterException(f"No valid Jumpstarter entry points found for package '{dist.name}'")
         # Return the completed driver package
         return V1Alpha1DriverPackage(
+            _distribution=dist,
             name=dist.name,
             categories=V1Alpha1DriverPackage.requires_dist_to_categories(
                 dist.name, dist.metadata.get_all("Requires-Dist")
