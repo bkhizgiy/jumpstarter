@@ -7,7 +7,13 @@ from jumpstarter_cli_common.exceptions import handle_exceptions
 from jumpstarter_cli_common.opt import OutputMode, OutputType
 from jumpstarter_cli_common.table import make_table
 
-from ..repository import LocalDriverRepository, V1Alpha1DriverPackageList
+from ..repository import (
+    LocalDriverRepository,
+    V1Alpha1AdapterEntryPointList,
+    V1Alpha1DriverClientEntryPointList,
+    V1Alpha1DriverEntryPointList,
+    V1Alpha1DriverPackageList,
+)
 
 MAX_SUMMARY_LENGTH = 100
 
@@ -26,135 +32,129 @@ def clean_truncate_summary(summary: Optional[str]):
     return truncated_summary
 
 
-def print_packages(local_drivers: V1Alpha1DriverPackageList, is_wide: bool):
-    if is_wide:
-        columns = ["NAME", "VERSION", "INSTALLED", "CATEGORIES", "LICENSE", "SUMMARY"]
-    else:
-        columns = ["NAME", "VERSION", "INSTALLED", "CATEGORIES"]
-    driver_rows = []
-    for package in local_drivers.items:
-        driver_rows.append(
-            {
-                "INSTALLED": "*" if package.installed else "",
-                "NAME": package.name,
-                "VERSION": package.version,
-                "CATEGORIES": ",".join(package.categories),
-                "LICENSE": package.license if package.license else "Unspecified",
-                "SUMMARY": clean_truncate_summary(package.summary),
-            }
-        )
-    click.echo(make_table(columns, driver_rows))
+def print_packages(packages: V1Alpha1DriverPackageList, output: OutputType):
+    match output:
+        case OutputMode.JSON:
+            click.echo(packages.dump_json())
+        case OutputMode.YAML:
+            click.echo(packages.dump_yaml())
+        case OutputMode.NAME:
+            for package in packages.items:
+                click.echo(f"package.jumpstarter.dev/{package.name}")
+        case _:
+            click.echo("Fetching local packages for current Python environment")
+            if output == OutputMode.WIDE:
+                columns = ["NAME", "VERSION", "INSTALLED", "CATEGORIES", "LICENSE", "SUMMARY"]
+            else:
+                columns = ["NAME", "VERSION", "INSTALLED", "CATEGORIES"]
+            driver_rows = []
+            for package in packages.items:
+                driver_rows.append(
+                    {
+                        "INSTALLED": "*" if package.installed else "",
+                        "NAME": package.name,
+                        "VERSION": package.version,
+                        "CATEGORIES": ",".join(package.categories),
+                        "LICENSE": package.license if package.license else "Unspecified",
+                        "SUMMARY": clean_truncate_summary(package.summary),
+                    }
+                )
+            click.echo(make_table(columns, driver_rows))
+
+
+def print_drivers(packages: V1Alpha1DriverPackageList, output: OutputType):
+    drivers = V1Alpha1DriverEntryPointList()
+    for package in packages.items:
+        for driver in package.drivers.items:
+            drivers.items.append(driver)
+    match output:
+        case OutputMode.JSON:
+            click.echo(drivers.dump_json())
+        case OutputMode.YAML:
+            click.echo(drivers.dump_yaml())
+        case OutputMode.NAME:
+            for driver in drivers.items:
+                click.echo(f"driver.jumpstarter.dev/{driver.package}/{driver.name}")
+        case _:
+            click.echo("Fetching local packages for current Python environment")
+            if output == OutputMode.WIDE:
+                columns = ["NAME", "PACKAGE", "TYPE"]
+            else:
+                columns = ["NAME", "PACKAGE", "TYPE"]
+            driver_rows = []
+            for driver in drivers.items:
+                driver_rows.append({"NAME": driver.name, "PACKAGE": driver.package, "TYPE": driver.type})
+            click.echo(make_table(columns, driver_rows))
+
+
+def print_driver_clients(packages: V1Alpha1DriverPackageList, output: OutputType):
+    driver_clients = V1Alpha1DriverClientEntryPointList()
+    for package in packages.items:
+        for client in package.driver_clients.items:
+            driver_clients.items.append(client)
+    match output:
+        case OutputMode.JSON:
+            click.echo(driver_clients.dump_json())
+        case OutputMode.YAML:
+            click.echo(driver_clients.dump_yaml())
+        case OutputMode.NAME:
+            for client in driver_clients.items:
+                click.echo(f"client.jumpstarter.dev/{client.package}/{client.name}")
+        case _:
+            click.echo("Fetching local packages for current Python environment")
+            if output == OutputMode.WIDE:
+                columns = ["NAME", "PACKAGE", "TYPE"]
+            else:
+                columns = ["NAME", "PACKAGE", "TYPE"]
+            driver_client_rows = []
+            for client in driver_clients.items:
+                driver_client_rows.append({"NAME": client.name, "PACKAGE": client.package, "TYPE": client.type})
+            click.echo(make_table(columns, driver_client_rows))
+
+
+def print_adapters(packages: V1Alpha1DriverPackageList, output: OutputType):
+    adapters = V1Alpha1AdapterEntryPointList()
+    for package in packages.items:
+        for adapter in package.adapters.items:
+            adapters.items.append(adapter)
+    match output:
+        case OutputMode.JSON:
+            click.echo(adapters.dump_json())
+        case OutputMode.YAML:
+            click.echo(adapters.dump_yaml())
+        case OutputMode.NAME:
+            for adapter in adapters.items:
+                click.echo(f"adapter.jumpstarter.dev/{adapter.package}/{adapter.name}")
+        case _:
+            click.echo("Fetching local packages for current Python environment")
+            if output == OutputMode.WIDE:
+                columns = ["NAME", "PACKAGE", "TYPE"]
+            else:
+                columns = ["NAME", "PACKAGE", "TYPE"]
+            adapter_rows = []
+            for adapter in adapters.items:
+                adapter_rows.append({"NAME": adapter.name, "PACKAGE": adapter.package, "TYPE": adapter.type})
+            click.echo(make_table(columns, adapter_rows))
 
 
 @click.command("list")
+@click.option("--drivers", is_flag=True, help="Print drivers only.")
+@click.option("--driver-clients", is_flag=True, help="Print driver clients only.")
+@click.option("--adapters", is_flag=True, help="Print adapters only.")
 @opt_output_all
 @handle_exceptions
-def list(output: OutputType):
+def list(output: OutputType, drivers: bool, driver_clients: bool, adapters: bool):
     """List Jumpstarter packages"""
+    # Add validation to ensure only one flag is set
+    if sum([drivers, driver_clients, adapters]) > 1:
+        raise click.UsageError("Only one of --drivers, --driver-clients, or --adapters can be specified.")
     local_repo = LocalDriverRepository.from_venv()
-    local_drivers = local_repo.list_packages()
-    match output:
-        case OutputMode.JSON:
-            click.echo(local_drivers.dump_json())
-        case OutputMode.YAML:
-            click.echo(local_drivers.dump_yaml())
-        case OutputMode.NAME:
-            for package in local_drivers.items:
-                for driver in package.drivers.items:
-                    click.echo(f"driver.jumpstarter.dev/{package.name}/{driver.name}")
-        case _:
-            click.echo("Fetching local packages for current Python environment")
-            print_packages(local_drivers, is_wide=output == OutputMode.WIDE)
-
-
-# def print_drivers(driver_packages: V1Alpha1DriverPackageList, is_wide: bool):
-#     if is_wide:
-#         columns = ["NAME", "PACKAGE", "VERSION", "TYPE", "CATEGORIES", "LICENSE"]
-#     else:
-#         columns = ["NAME", "TYPE"]
-#     driver_rows = []
-#     for package in driver_packages.items:
-#         for driver in package.drivers:
-#             driver_rows.append(
-#                 {
-#                     "NAME": driver.name,
-#                     "PACKAGE": package.name,
-#                     "VERSION": package.version,
-#                     "TYPE": driver.type,
-#                     "CATEGORIES": ",".join(package.categories),
-#                     "LICENSE": package.license if package.license else "Unspecified",
-#                 }
-#             )
-#     click.echo(make_table(columns, driver_rows))
-
-
-# @list.command("drivers")
-# @opt_output_all
-# @handle_exceptions
-# async def get_drivers(output: OutputType):
-#     """
-#     Display all available drivers.
-#     """
-#     local_repo = LocalDriverRepository.from_venv()
-#     local_drivers = local_repo.list_packages()
-#     match output:
-#         case OutputMode.JSON:
-#             click.echo(local_drivers.dump_json())
-#         case OutputMode.YAML:
-#             click.echo(local_drivers.dump_yaml())
-#         case OutputMode.NAME:
-#             for package in local_drivers.items:
-#                 for driver in package.drivers:
-#                     click.echo(f"driver.jumpstarter.dev/{package.name}/{driver.name}")
-#         case _:
-#             print_drivers(local_drivers, is_wide=output == OutputMode.WIDE)
-
-
-# def print_driver_clients(driver_packages: V1Alpha1DriverPackageList, is_wide: bool):
-#     if is_wide:
-#         columns = ["NAME", "PACKAGE", "VERSION", "TYPE", "CATEGORIES", "LICENSE"]
-#     else:
-#         columns = ["NAME", "TYPE"]
-#     driver_rows = []
-#     for package in driver_packages.items:
-#         for client in package.clients:
-#             driver_rows.append(
-#                 {
-#                     "NAME": client.name,
-#                     "PACKAGE": package.name,
-#                     "VERSION": package.version,
-#                     "TYPE": client.type,
-#                     "CATEGORIES": ",".join(package.categories),
-#                     "LICENSE": package.license if package.license else "Unspecified",
-#                 }
-#             )
-#     click.echo(make_table(columns, driver_rows))
-
-
-# @list.command("driver-clients")
-# @opt_output_all
-# @handle_exceptions
-# async def get_driver_clients(output: OutputType):
-#     """
-#     Display all available driver clients.
-#     """
-#     local_repo = LocalDriverRepository.from_venv()
-#     local_drivers = local_repo.list_packages()
-#     match output:
-#         case OutputMode.JSON:
-#             click.echo(local_drivers.dump_json())
-#         case OutputMode.YAML:
-#             click.echo(local_drivers.dump_yaml())
-#         case OutputMode.NAME:
-#             for package in local_drivers.items:
-#                 for driver in package.drivers:
-#                     click.echo(f"driver-client.jumpstarter.dev/{package.name}/{driver.name}")
-#         case _:
-#             print_driver_clients(local_drivers, is_wide=output == OutputMode.WIDE)
-
-
-# @list.command("packages")
-# async def get_packages(output: OutputType):
-#     """
-#     Display all available jumpstarter driver packages.
-#     """
+    local_packages = local_repo.list_packages()
+    if drivers:
+        print_drivers(local_packages, output)
+    elif driver_clients:
+        print_driver_clients(local_packages, output)
+    elif adapters:
+        print_adapters(local_packages, output)
+    else:
+        print_packages(local_packages, output)

@@ -31,4 +31,4 @@ class ListBaseModel(JsonBaseModel, Generic[T]):
 
     api_version: Literal["jumpstarter.dev/v1alpha1"] = Field(alias="apiVersion", default="jumpstarter.dev/v1alpha1")
     kind: Literal["List"] = Field(default="List")
-    items: list[T]
+    items: list[T] = []
