@@ -25,7 +25,6 @@ dev = [
 ]
 
 [project.entry-points."jumpstarter.drivers"]
-AsyncSerial = "jumpstarter_driver_pyserial.driver:AsyncSerial"
 PySerial = "jumpstarter_driver_pyserial.driver:PySerial"
 
 [project.entry-points."jumpstarter.clients"]

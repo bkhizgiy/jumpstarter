@@ -34,19 +34,19 @@ class LocalDriverRepository(DriverRepository):
                     return False
         return False
 
-    def list_packages(self) -> V1Alpha1DriverPackageList:
+    def list_packages(self, should_inspect: bool = False) -> V1Alpha1DriverPackageList:
         # Get the local drivers using the Jumpstarter drivers entry point
         driver_packages = []
         # Iterate through the local package distributions
         for dist in distributions():
             # Check if the distribution is a Jumpstarter package
             if self._is_jumpstarter_package(dist):
-                driver_packages.append(V1Alpha1DriverPackage.from_distribution(dist))
+                driver_packages.append(V1Alpha1DriverPackage.from_distribution(dist, should_inspect))
         return V1Alpha1DriverPackageList(items=driver_packages)
 
-    def get_package(self, name: str) -> V1Alpha1DriverPackage:
+    def get_package(self, name: str, should_inspect: bool = False) -> V1Alpha1DriverPackage:
         try:
             # Convert the distribution to a driver package object
-            return V1Alpha1DriverPackage.from_distribution(distribution(name))
+            return V1Alpha1DriverPackage.from_distribution(distribution(name), should_inspect)
         except PackageNotFoundError as e:
             raise JumpstarterException(f"Package '{name}' metadata could not be found") from e

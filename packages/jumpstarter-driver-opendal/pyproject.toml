@@ -17,7 +17,7 @@ MockFlasher = "jumpstarter_driver_opendal.driver:MockFlasher"
 MockStorageMux = "jumpstarter_driver_opendal.driver:MockStorageMux"
 
 [project.entry-points."jumpstarter.adapters"]
-OpendalAdapter = "jumpstarter_driver_opendal.adapters:OpendalAdapter"
+OpendalAdapter = "jumpstarter_driver_opendal.adapter:OpendalAdapter"
 
 [project.entry-points."jumpstarter.clients"]
 OpendalClient = "jumpstarter_driver_opendal.client:OpendalClient"

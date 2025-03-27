@@ -7,6 +7,7 @@ from jumpstarter_cli_common.exceptions import handle_exceptions
 from jumpstarter_cli_common.opt import OutputMode, OutputType
 from jumpstarter_cli_common.table import make_table
 
+from ..opt import opt_adapters, opt_driver_clients, opt_drivers, opt_inspect
 from ..repository import (
     LocalDriverRepository,
     V1Alpha1AdapterEntryPointList,
@@ -42,7 +43,6 @@ def print_packages(packages: V1Alpha1DriverPackageList, output: OutputType):
             for package in packages.items:
                 click.echo(f"package.jumpstarter.dev/{package.name}")
         case _:
-            click.echo("Fetching local packages for current Python environment")
             if output == OutputMode.WIDE:
                 columns = ["NAME", "VERSION", "INSTALLED", "CATEGORIES", "LICENSE", "SUMMARY"]
             else:
@@ -51,7 +51,7 @@ def print_packages(packages: V1Alpha1DriverPackageList, output: OutputType):
             for package in packages.items:
                 driver_rows.append(
                     {
-                        "INSTALLED": "*" if package.installed else "",
+                        "INSTALLED": "Yes" if package.installed else "No",
                         "NAME": package.name,
                         "VERSION": package.version,
                         "CATEGORIES": ",".join(package.categories),
@@ -62,7 +62,7 @@ def print_packages(packages: V1Alpha1DriverPackageList, output: OutputType):
             click.echo(make_table(columns, driver_rows))
 
 
-def print_drivers(packages: V1Alpha1DriverPackageList, output: OutputType):
+def print_drivers(packages: V1Alpha1DriverPackageList, output: OutputType, inspect: bool):
     drivers = V1Alpha1DriverEntryPointList()
     for package in packages.items:
         for driver in package.drivers.items:
@@ -76,14 +76,21 @@ def print_drivers(packages: V1Alpha1DriverPackageList, output: OutputType):
             for driver in drivers.items:
                 click.echo(f"driver.jumpstarter.dev/{driver.package}/{driver.name}")
         case _:
-            click.echo("Fetching local packages for current Python environment")
-            if output == OutputMode.WIDE:
-                columns = ["NAME", "PACKAGE", "TYPE"]
+            if output == OutputMode.WIDE and inspect:
+                columns = ["NAME", "PACKAGE", "TYPE", "CLIENT", "SUMMARY"]
             else:
                 columns = ["NAME", "PACKAGE", "TYPE"]
             driver_rows = []
             for driver in drivers.items:
-                driver_rows.append({"NAME": driver.name, "PACKAGE": driver.package, "TYPE": driver.type})
+                driver_rows.append(
+                    {
+                        "NAME": driver.name,
+                        "PACKAGE": driver.package,
+                        "TYPE": driver.type,
+                        "CLIENT": driver.client_type if driver.client_type else "",
+                        "SUMMARY": clean_truncate_summary(driver.summary),
+                    }
+                )
             click.echo(make_table(columns, driver_rows))
 
 
@@ -101,14 +108,20 @@ def print_driver_clients(packages: V1Alpha1DriverPackageList, output: OutputType
             for client in driver_clients.items:
                 click.echo(f"client.jumpstarter.dev/{client.package}/{client.name}")
         case _:
-            click.echo("Fetching local packages for current Python environment")
             if output == OutputMode.WIDE:
-                columns = ["NAME", "PACKAGE", "TYPE"]
+                columns = ["NAME", "PACKAGE", "TYPE", "SUMMARY"]
             else:
                 columns = ["NAME", "PACKAGE", "TYPE"]
             driver_client_rows = []
             for client in driver_clients.items:
-                driver_client_rows.append({"NAME": client.name, "PACKAGE": client.package, "TYPE": client.type})
+                driver_client_rows.append(
+                    {
+                        "NAME": client.name,
+                        "PACKAGE": client.package,
+                        "TYPE": client.type,
+                        "SUMMARY": clean_truncate_summary(client.summary),
+                    }
+                )
             click.echo(make_table(columns, driver_client_rows))
 
 
@@ -126,7 +139,6 @@ def print_adapters(packages: V1Alpha1DriverPackageList, output: OutputType):
             for adapter in adapters.items:
                 click.echo(f"adapter.jumpstarter.dev/{adapter.package}/{adapter.name}")
         case _:
-            click.echo("Fetching local packages for current Python environment")
             if output == OutputMode.WIDE:
                 columns = ["NAME", "PACKAGE", "TYPE"]
             else:
@@ -138,20 +150,26 @@ def print_adapters(packages: V1Alpha1DriverPackageList, output: OutputType):
 
 
 @click.command("list")
-@click.option("--drivers", is_flag=True, help="Print drivers only.")
-@click.option("--driver-clients", is_flag=True, help="Print driver clients only.")
-@click.option("--adapters", is_flag=True, help="Print adapters only.")
+@opt_drivers
+@opt_driver_clients
+@opt_adapters
+@opt_inspect
 @opt_output_all
 @handle_exceptions
-def list(output: OutputType, drivers: bool, driver_clients: bool, adapters: bool):
+def list(output: OutputType, drivers: bool, driver_clients: bool, adapters: bool, inspect: bool):
     """List available Jumpstarter packages."""
     # Add validation to ensure only one flag is set
     if sum([drivers, driver_clients, adapters]) > 1:
         raise click.UsageError("Only one of --drivers, --driver-clients, or --adapters can be specified.")
+    # Print loading message for text outputs
+    if output is None or output == OutputMode.WIDE:
+        click.echo("Fetching local packages for current Python environment")
+    # Load the packages from the local environment
     local_repo = LocalDriverRepository.from_venv()
-    local_packages = local_repo.list_packages()
+    local_packages = local_repo.list_packages(inspect)
+    # Print specified output
     if drivers:
-        print_drivers(local_packages, output)
+        print_drivers(local_packages, output, inspect)
     elif driver_clients:
         print_driver_clients(local_packages, output)
     elif adapters:

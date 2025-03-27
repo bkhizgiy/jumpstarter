@@ -1,98 +1,19 @@
-from importlib.metadata import Distribution, EntryPoint
+from importlib.metadata import Distribution
 from typing import Literal, Optional
 
 from pydantic import Field
 
-from .entry_points import EntryPointGroups
+from .entry_points import (
+    EntryPointGroups,
+    V1Alpha1AdapterEntryPoint,
+    V1Alpha1AdapterEntryPointList,
+    V1Alpha1DriverClientEntryPoint,
+    V1Alpha1DriverClientEntryPointList,
+    V1Alpha1DriverEntryPoint,
+    V1Alpha1DriverEntryPointList,
+)
 from jumpstarter.common.exceptions import JumpstarterException
 from jumpstarter.models import JsonBaseModel, ListBaseModel
-
-
-class V1Alpha1AdapterEntryPoint(JsonBaseModel):
-    """
-    A Jumpstarter adapter entry point.
-    """
-
-    _entry_point: EntryPoint
-
-    api_version: Literal["jumpstarter.dev/v1alpha1"] = Field(default="jumpstarter.dev/v1alpha1", alias="apiVersion")
-    kind: Literal["AdapterEntryPoint"] = Field(default="AdapterEntryPoint")
-
-    name: str
-    type: str
-    package: str
-
-    @staticmethod
-    def from_entry_point(ep: EntryPoint):
-        return V1Alpha1AdapterEntryPoint(
-            _entry_point=ep, name=ep.name, type=ep.value.replace(":", "."), package=ep.dist.name
-        )
-
-
-class V1Alpha1DriverClientEntryPoint(JsonBaseModel):
-    """
-    A Jumpstarter driver client entry point.
-    """
-
-    _entry_point: EntryPoint
-
-    api_version: Literal["jumpstarter.dev/v1alpha1"] = Field(default="jumpstarter.dev/v1alpha1", alias="apiVersion")
-    kind: Literal["DriverClientEntryPoint"] = Field(default="DriverClientEntryPoint")
-
-    name: str
-    type: str
-    package: str
-
-    @staticmethod
-    def from_entry_point(ep: EntryPoint):
-        return V1Alpha1DriverClientEntryPoint(
-            _entry_point=ep, name=ep.name, type=ep.value.replace(":", "."), package=ep.dist.name
-        )
-
-
-class V1Alpha1DriverEntryPoint(JsonBaseModel):
-    """
-    A Jumpstarter driver entry point.
-    """
-
-    _entry_point: EntryPoint
-
-    api_version: Literal["jumpstarter.dev/v1alpha1"] = Field(default="jumpstarter.dev/v1alpha1", alias="apiVersion")
-    kind: Literal["DriverEntryPoint"] = Field(default="DriverEntryPoint")
-
-    name: str
-    type: str
-    package: str
-
-    @staticmethod
-    def from_entry_point(ep: EntryPoint):
-        return V1Alpha1DriverEntryPoint(
-            _entry_point=ep, name=ep.name, type=ep.value.replace(":", "."), package=ep.dist.name
-        )
-
-
-class V1Alpha1AdapterEntryPointList(ListBaseModel[V1Alpha1AdapterEntryPoint]):
-    """
-    A list of Jumpstarter adapter list models.
-    """
-
-    kind: Literal["AdapterEntryPointList"] = Field(default="AdapterEntryPointList")
-
-
-class V1Alpha1DriverEntryPointList(ListBaseModel[V1Alpha1DriverEntryPoint]):
-    """
-    A list of Jumpstarter driver list models.
-    """
-
-    kind: Literal["DriverEntryPointList"] = Field(default="DriverEntryPointList")
-
-
-class V1Alpha1DriverClientEntryPointList(ListBaseModel[V1Alpha1DriverClientEntryPoint]):
-    """
-    A list of Jumpstarter driver client classes.
-    """
-
-    kind: Literal["DriverClientEntryPointList"] = Field(default="DriverClientEntryPointList")
 
 
 class V1Alpha1DriverPackage(JsonBaseModel):
@@ -160,9 +81,16 @@ class V1Alpha1DriverPackage(JsonBaseModel):
         return categories
 
     @staticmethod
-    def from_distribution(dist: Distribution):
+    def from_distribution(dist: Distribution, should_inspect: bool):
         """
-        Create a `DriverPackage` from an `importlib.metadata.EntryPoint`.
+        Construct a `DriverPackage` from an `importlib.metadata.EntryPoint`.
+
+        Args:
+            dist: The Distribution object
+            should_inspect: Preform additional inspection of the EntryPoint class (default = False)
+
+        Returns:
+            The constructed `V1Alpha1DriverPackage`.
         """
         # Collect entry points for each type
         drivers = []
@@ -172,11 +100,11 @@ class V1Alpha1DriverPackage(JsonBaseModel):
         for ep in list(dist.entry_points):
             match ep.group:
                 case EntryPointGroups.DRIVER_ENTRY_POINT_GROUP:
-                    drivers.append(V1Alpha1DriverEntryPoint.from_entry_point(ep))
+                    drivers.append(V1Alpha1DriverEntryPoint.from_entry_point(ep, should_inspect))
                 case EntryPointGroups.DRIVER_CLIENT_ENTRY_POINT_GROUP:
-                    driver_clients.append(V1Alpha1DriverClientEntryPoint.from_entry_point(ep))
+                    driver_clients.append(V1Alpha1DriverClientEntryPoint.from_entry_point(ep, should_inspect))
                 case EntryPointGroups.ADAPTER_ENTRY_POINT_GROUP:
-                    adapters.append(V1Alpha1AdapterEntryPoint.from_entry_point(ep))
+                    adapters.append(V1Alpha1AdapterEntryPoint.from_entry_point(ep, should_inspect))
         #  Check if any entry points were found
         if len(drivers) + len(driver_clients) + len(adapters) == 0:
             raise JumpstarterException(f"No valid Jumpstarter entry points found for package '{dist.name}'")
