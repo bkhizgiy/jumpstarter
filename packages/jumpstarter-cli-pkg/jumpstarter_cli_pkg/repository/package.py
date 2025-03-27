@@ -109,8 +109,7 @@ class V1Alpha1DriverPackage(JsonBaseModel):
         if len(drivers) + len(driver_clients) + len(adapters) == 0:
             raise JumpstarterException(f"No valid Jumpstarter entry points found for package '{dist.name}'")
         # Return the completed driver package
-        return V1Alpha1DriverPackage(
-            _distribution=dist,
+        package = V1Alpha1DriverPackage(
             name=dist.name,
             categories=V1Alpha1DriverPackage.requires_dist_to_categories(
                 dist.name, dist.metadata.get_all("Requires-Dist")
@@ -122,6 +121,12 @@ class V1Alpha1DriverPackage(JsonBaseModel):
             driver_clients=V1Alpha1DriverClientEntryPointList(items=driver_clients),
             adapters=V1Alpha1AdapterEntryPointList(items=adapters),
         )
+        # Set hidden property for distribution
+        package._distribution = dist
+        return package
+
+    def get_distribution(self) -> Distribution:
+        return self._distribution
 
     def list_drivers(self) -> V1Alpha1DriverEntryPointList:
         return self.drivers

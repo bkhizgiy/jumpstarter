@@ -132,8 +132,7 @@ class V1Alpha1AdapterEntryPoint(JsonBaseModel):
         value_split = ep.value.split(":")
         module = value_split[0]
         function_name = value_split[1]
-        return V1Alpha1AdapterEntryPoint(
-            _entry_point=ep,
+        adapter = V1Alpha1AdapterEntryPoint(
             name=ep.name,
             module=module,
             function_name=function_name,
@@ -141,6 +140,8 @@ class V1Alpha1AdapterEntryPoint(JsonBaseModel):
             package=ep.dist.name,
             summary=summary,
         )
+        adapter._entry_point = ep
+        return adapter
 
 
 class V1Alpha1DriverClientEntryPoint(JsonBaseModel):
@@ -173,8 +174,7 @@ class V1Alpha1DriverClientEntryPoint(JsonBaseModel):
         value_split = ep.value.split(":")
         module = value_split[0]
         class_name = value_split[1]
-        return V1Alpha1DriverClientEntryPoint(
-            _entry_point=ep,
+        driver_client = V1Alpha1DriverClientEntryPoint(
             name=ep.name,
             module=module,
             class_name=class_name,
@@ -183,6 +183,8 @@ class V1Alpha1DriverClientEntryPoint(JsonBaseModel):
             summary=summary,
             cli=cli,
         )
+        driver_client._entry_point = ep
+        return driver_client
 
 
 class V1Alpha1DriverEntryPoint(JsonBaseModel):
@@ -226,8 +228,7 @@ class V1Alpha1DriverEntryPoint(JsonBaseModel):
         value_split = ep.value.split(":")
         module = value_split[0]
         class_name = value_split[1]
-        return V1Alpha1DriverEntryPoint(
-            _entry_point=ep,
+        driver = V1Alpha1DriverEntryPoint(
             name=ep.name,
             module=module,
             class_name=class_name,
@@ -236,6 +237,8 @@ class V1Alpha1DriverEntryPoint(JsonBaseModel):
             summary=summary,
             client_type=client_type,
         )
+        driver._entry_point = ep
+        return driver
 
 
 class V1Alpha1AdapterEntryPointList(ListBaseModel[V1Alpha1AdapterEntryPoint]):
