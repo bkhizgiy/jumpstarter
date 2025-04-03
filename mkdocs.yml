@@ -1,0 +1,41 @@
+site_name: Jumpstarter
+site_url: https://jumpstarter.dev
+repo_url: https://github.com/jumpstarter-dev/jumpstarter
+repo_name: jumpstarter-dev/jumpstarter
+plugins:
+  - search
+  - blog
+theme:
+  name: material
+  logo: assets/jumpstarter_mono_black.svg
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.instant.prefetch
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      primary: amber
+      accent: amber
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      primary: amber
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: amber
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
