@@ -14,7 +14,7 @@ serve-all:
 	python3 -m http.server 8000 --bind 127.0.0.1 -d ./docs/build_all
 
 serve-docs:
-	uv run --isolated --all-packages --group docs $(MAKE) -C docs serve HOST="$(DOC_LISTEN)"
+	uv run --isolated --all-packages --group docs mkdocs serve
 
 clean-docs:
 	uv run --isolated --all-packages --group docs $(MAKE) -C docs clean
