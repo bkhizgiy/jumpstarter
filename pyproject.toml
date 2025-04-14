@@ -31,6 +31,7 @@ jumpstarter-imagehash = { workspace = true }
 jumpstarter-kubernetes = { workspace = true }
 jumpstarter-protocol = { workspace = true }
 jumpstarter-testing = { workspace = true }
+jumpstarter-robotframework = { workspace = true }
 sphinx-click = { git = "https://github.com/NickCao/sphinx-click" }
 
 [dependency-groups]

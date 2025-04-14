@@ -36,6 +36,7 @@ dependencies = [
   "jumpstarter-kubernetes",
   "jumpstarter-protocol",
   "jumpstarter-testing",
+  "jumpstarter-robotframework",
 ]
 
 [tool.hatch.build.targets.wheel]
