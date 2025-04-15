@@ -9,8 +9,8 @@ from jumpstarter_kubernetes import (
     V1Alpha1Client,
     V1Alpha1Exporter,
     V1Alpha1Lease,
-    V1Alpha1List,
 )
+from jumpstarter.common.pydantic import SerializableBaseModelList
 
 CLIENT_COLUMNS = ["NAME", "ENDPOINT", "AGE"]
 
@@ -30,7 +30,7 @@ def print_client(client: V1Alpha1Client, output: OutputType):
         click.echo(make_table(CLIENT_COLUMNS, [make_client_row(client)]))
 
 
-def print_clients(clients: V1Alpha1List[V1Alpha1Client], namespace: str, output: OutputType):
+def print_clients(clients: SerializableBaseModelList[V1Alpha1Client], namespace: str, output: OutputType):
     if output:
         echo(clients.dump(output))
     else:
@@ -86,7 +86,9 @@ def print_exporter(exporter: V1Alpha1Exporter, devices: bool, output: OutputType
             click.echo(make_table(EXPORTER_COLUMNS, [make_exporter_row(exporter)]))
 
 
-def print_exporters(exporters: V1Alpha1List[V1Alpha1Exporter], namespace: str, devices: bool, output: OutputType):
+def print_exporters(
+    exporters: SerializableBaseModelList[V1Alpha1Exporter], namespace: str, devices: bool, output: OutputType
+):
     if output:
         echo(exporters.dump(output))
     else:
@@ -144,7 +146,7 @@ def print_lease(lease: V1Alpha1Lease, output: OutputType):
         click.echo(make_table(LEASE_COLUMNS, [make_lease_row(lease)]))
 
 
-def print_leases(leases: V1Alpha1List[V1Alpha1Lease], namespace: str, output: OutputType):
+def print_leases(leases: SerializableBaseModelList[V1Alpha1Lease], namespace: str, output: OutputType):
     if output:
         echo(leases.dump(output))
     else:

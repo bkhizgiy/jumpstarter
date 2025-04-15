@@ -1,5 +1,9 @@
+from typing import Generic, Literal, TypeVar
+
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+T = TypeVar("T")
 
 
 class OutputMode(str):
@@ -31,3 +35,15 @@ class SerializableBaseModel(BaseModel):
 
     def dump_yaml(self) -> str:
         return yaml.safe_dump(self.model_dump(mode="json", by_alias=True), indent=2)
+
+
+class SerializableBaseModelList(SerializableBaseModel, Generic[T]):
+    api_version: Literal["jumpstarter.dev/v1alpha1"] = Field(
+        alias="apiVersion",
+        default="jumpstarter.dev/v1alpha1",
+    )
+    kind: Literal["List"] = Field(default="List")
+    items: list[T]
+
+    def dump_name(self):
+        return "".join(item.dump_name() for item in self.items)
