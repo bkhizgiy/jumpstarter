@@ -4,7 +4,7 @@
 
 ## Installation
 
-```bash
+```shell
 pip install jumpstarter-driver-corellium
 ```
 
@@ -24,10 +24,6 @@ export:
       # device_os: "1.0"
       # device_build: "Critical Application Monitor (Baremetal)"
 ```
-
-## API Reference
-
-For more examples, check the [examples folder](./examples).
 
 ### ExporterConfig Example
 

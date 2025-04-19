@@ -14,3 +14,7 @@ For comprehensive documentation on the adapter architecture, including detailed
 patterns and examples, see the [Adapter Classes and Architecture](../api-reference/adapters.md) reference.
 
 Unlike [Drivers](./drivers.md), which establish the foundational connections to hardware or virtual interfaces, adapters focus on providing alternative ways to interact with those connections without modifying the underlying drivers.
+
+## Types of Adapters
+
+* 📡 [Network](../api-reference/adapters/network.md): Adapters that transform network connections and streams into different protocols or connection types.

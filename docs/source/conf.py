@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.abspath("../.."))
 
 project = "jumpstarter"
 copyright = "2025, Jumpstarter Contributors"
-author = "Jumpstarter Community"
+author = "Jumpstarter Contributors"
 
 controller_version = requests.get(
     "https://quay.io/api/v1/repository/jumpstarter-dev/helm/jumpstarter/tag/", params={"limit": 1}
@@ -40,11 +40,16 @@ exclude_patterns = []
 
 mermaid_version = "10.9.1"
 
+suppress_warnings = [
+    "ref.class",  # suppress unresolved Python class references (external references
+                 # are warnings otherwise)
+]
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "furo"
-html_title = "Jumpstarter Docs"
+html_title = "Jumpstarter Documentation"
 html_logo = "_static/img/logo-light-theme.svg"
 html_favicon = "_static/img/favicon.png"
 html_show_sphinx = False
@@ -86,11 +91,24 @@ html_theme_options = {
 # This replaces the custom bash script approach with built-in functionality
 
 # Tags pattern for html_context["versions"]
-smv_tag_whitelist = r"^main$|^v(0\.[5-9](\.\d+)|0\.[1-9][0-9]+(\.\d+)|[1-9]\d*\.\d+\.\d+)$"  # Starting from v0.5.0
+smv_tag_whitelist = r"^v(0\.[5-9](\.\d+)|0\.[1-9][0-9]+(\.\d+)|[1-9]\d*\.\d+\.\d+)$"  # Starting from v0.5.0
 smv_branch_whitelist = r"^(main|master)$"  # Only include main/master branch
 smv_remote_whitelist = None
 smv_released_pattern = r"^v[0-9]+\.[0-9]+\.[0-9]+$"  # Tags that are considered releases
 smv_outputdir_format = "{ref.name}"  # Directory name format
+
+# Ensure static files are copied to all versions
+smv_static_files = [
+    "_static/**",
+    "_templates/**",
+]
+
+# Ensure RST directives are processed
+smv_include_patterns = [
+    "*.md",
+    "*.rst",
+    "*.txt",
+]
 
 # Patterns for the versions panel
 html_context = {

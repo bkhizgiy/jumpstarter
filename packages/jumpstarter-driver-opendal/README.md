@@ -4,7 +4,7 @@
 
 ## Installation
 
-```bash
+```shell
 pip install jumpstarter-driver-opendal
 ```
 
@@ -29,7 +29,7 @@ Example configuration:
 ```
 
 ```{testsetup} *
-from jumpstarter.config import ExporterConfigV1Alpha1DriverInstance
+from jumpstarter.config.exporter import ExporterConfigV1Alpha1DriverInstance
 from jumpstarter.common.utils import serve
 
 instance = serve(
