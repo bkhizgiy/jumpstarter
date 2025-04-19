@@ -1,10 +1,9 @@
 *** Settings ***
 Library     String
-Library     jumpstarter_robotframework.JumpstarterLibrary
+# Library    jumpstarter_robotframework.JumpstarterLibrary    exporter_config=/etc/jumpstarter/exporters/local-exporter.yaml
 
 
 *** Test Cases ***
 Example Test Case
-    Acquire Lease    selector=example.com/board=qemu
-    Power On
-    Release Lease
+    # Power On
+    # Release Lease
