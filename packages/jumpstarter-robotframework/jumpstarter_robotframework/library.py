@@ -73,23 +73,25 @@ class JumpstarterLibrary:
             self._builtin = BuiltIn()
         except RobotNotRunningError:
             self._builtin = None
-            logger.debug("Robot Framework is not running")
+            logger.warn("Robot Framework is not running")
 
-            # If we're not running in Robot Framework but have an exporter config,
-            # create a stub client for documentation/intellisense
-            if exporter_config:
-                self._create_stub_client()
+        # If we're not running a test suite, create a stub client for documentation/intellisense
+        if not self._is_robot_running() and self._exporter_config:
+            logger.debug("Creating stub client from exporter config")
+            self._create_stub_client()
 
     def _create_stub_client(self):
         """Create a stub client from the exporter config for documentation/intellisense."""
         if self._exporter_config and not self._is_robot_running():
             try:
                 logger.debug(f"Creating stub client from exporter config: {self._exporter_config}")
+                # Load the exporter config
                 config = ExporterConfigV1Alpha1.load(self._exporter_config)
+                # Create a stub client from the exporter config
                 self._stub_client = config.create_client_stub(unsafe=True)
                 logger.debug("Successfully created stub client")
             except Exception as e:
-                logger.debug(f"Failed to create stub client: {str(e)}")
+                raise Error(f"Failed to create stub client: {str(e)}") from e
 
     def _acquire_lease(
         self, selector: Optional[str] = None, client_alias: Optional[str] = None, exporter_config: Optional[str] = None
@@ -203,10 +205,12 @@ class JumpstarterLibrary:
         """
         # If we already have a client, return it
         if self._client is not None:
+            logger.debug("get_client: returning existing client")
             return self._client
 
-        # If we're not running in Robot Framework but have a stub client, return it
-        if not self._is_robot_running() and self._stub_client is not None:
+        # If we have a stub client and Robot isn't running
+        if self._stub_client and not self._is_robot_running():
+            logger.debug("get_client: returning stub client")
             return self._stub_client
 
         # Otherwise, try to acquire a lease normally
@@ -236,19 +240,17 @@ class JumpstarterLibrary:
         yield "acquire_lease"
         yield "release_lease"
 
-        if not self._is_robot_running():
-            logger.info("get_keyword_names: Called by language server or documentation tool, skipping dynamic keywords")
-            return
-
         # Dynamic keywords from client object and its nested objects
         try:
-            current = self._get_client()
+            client = self._get_client()
         except Error as e:
-            logger.info(f"Unable to acquire lease, skipping dynamic keywords: {e}")
+            logger.info(f"Unable to get driver client, skipping dynamic keywords: {e}")
             return
 
+        raise Error(f"Stub client returned because Robot Framework is not running: {client}")
+
         # Get the keywords from the client object and its nested objects
-        yield from self._get_nested_keywords(current.children)
+        yield from self._get_nested_keywords(client.children)
 
     def __getattr__(self, name: str) -> Optional[Callable]:
         """Dynamically create keyword methods from the client object.
