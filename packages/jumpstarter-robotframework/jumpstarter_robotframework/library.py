@@ -1,15 +1,17 @@
 import os
-import time
 from contextlib import ExitStack
 from pathlib import Path
 from typing import Any, Callable, Generator, Optional
 
 from robot.api import Error, logger
 from robot.api.deco import library
+from robot.libraries.BuiltIn import BuiltIn, RobotNotRunningError  # type: ignore
 
+from jumpstarter.client.base import DriverClient
 from jumpstarter.client.lease import Lease
 from jumpstarter.common.utils import env
-from jumpstarter.config import ClientConfigV1Alpha1, ExporterConfigV1Alpha1
+from jumpstarter.config.client import ClientConfigV1Alpha1
+from jumpstarter.config.exporter import ExporterConfigV1Alpha1
 
 
 @library(scope="GLOBAL", version="0.6.0")
@@ -39,7 +41,9 @@ class JumpstarterLibrary:
     _lease: Optional[Lease] = None
     _portal: Any = None
     _stack: ExitStack
-    _unix_socket_path: Path
+    _unix_socket_path: Optional[Path] = None
+    _builtin: Optional[BuiltIn] = None
+    _stub_client: Optional[Any] = None
 
     def __init__(
         self, selector: Optional[str] = None, client: Optional[str] = None, exporter_config: Optional[str] = None
@@ -62,6 +66,30 @@ class JumpstarterLibrary:
         self._client_alias = client
         self._exporter_config = exporter_config
         self._stack = ExitStack()
+        self._stub_client = None
+
+        # Initialize BuiltIn instance once
+        try:
+            self._builtin = BuiltIn()
+        except RobotNotRunningError:
+            self._builtin = None
+            logger.debug("Robot Framework is not running")
+
+            # If we're not running in Robot Framework but have an exporter config,
+            # create a stub client for documentation/intellisense
+            if exporter_config:
+                self._create_stub_client()
+
+    def _create_stub_client(self):
+        """Create a stub client from the exporter config for documentation/intellisense."""
+        if self._exporter_config and not self._is_robot_running():
+            try:
+                logger.debug(f"Creating stub client from exporter config: {self._exporter_config}")
+                config = ExporterConfigV1Alpha1.load(self._exporter_config)
+                self._stub_client = config.create_client_stub(unsafe=True)
+                logger.debug("Successfully created stub client")
+            except Exception as e:
+                logger.debug(f"Failed to create stub client: {str(e)}")
 
     def _acquire_lease(
         self, selector: Optional[str] = None, client_alias: Optional[str] = None, exporter_config: Optional[str] = None
@@ -71,23 +99,23 @@ class JumpstarterLibrary:
             raise Error("Lease already acquired")
 
         if exporter_config:
-            logger.warn("acquire_lease: creating local exporter")
+            logger.debug("acquire_lease: creating local exporter")
             try:
                 config = ExporterConfigV1Alpha1.load(exporter_config)
-                logger.warn("acquire_lease: serving unix socket")
+                logger.debug("acquire_lease: serving unix socket")
                 self._unix_socket_path = self._stack.enter_context(config.serve_unix())
                 os.environ["JUMPSTARTER_HOST"] = str(self._unix_socket_path)
                 os.environ["JMP_DRIVERS_ALLOW"] = "UNSAFE"  # Allow unsafe drivers for testing locally
-                logger.warn(f"acquire_lease: unix socket path: {self._unix_socket_path}")
+                logger.debug(f"acquire_lease: unix socket path: {self._unix_socket_path}")
                 logger.info(f"Successfully created local exporter using config: {exporter_config}")
             except Exception as e:
                 self._release_lease()
                 raise Error(f"Failed to create local exporter: {str(e)}") from e
 
         try:
-            logger.warn("acquire_lease: entering env")
+            logger.debug("acquire_lease: entering env")
             self._client = self._stack.enter_context(env())
-            logger.warn("acquire_lease: entered env")
+            logger.debug("acquire_lease: entered env")
         except RuntimeError:
             try:
                 client_config = ClientConfigV1Alpha1.load(alias=client_alias or "default")
@@ -100,13 +128,11 @@ class JumpstarterLibrary:
     def _release_lease(self) -> None:
         """Release the lease for the Jumpstarter device."""
         if self._lease is None and self._client is None:
-            logger.warn("No lease to release, skipping")
+            logger.info("No lease to release, skipping")
             return
 
         # Exit the ExitStack to release all resources
         self._stack.close()
-        # BUG workaround: make sure that grpc servers get the client/lease release properly
-        time.sleep(1)
 
         self._lease = None
         self._client = None
@@ -139,41 +165,34 @@ class JumpstarterLibrary:
         """
         self._release_lease()
 
-    def _get_nested_keywords(self, obj: Any, prefix: str = "") -> Generator[str, None, None]:
-        """Recursively get all keyword names from nested objects.
+    def _get_nested_keywords(self, children: dict[str, DriverClient], prefix: str = "") -> Generator[str, None, None]:
+        """Recursively get all keyword names from nested objects."""
+        for key, child in children.items():
+            # Get all methods from the child's class
+            child_class = child.__class__
 
-        This method concatenates the full path to the driver client method with underscores
-        to follow the Robot Framework keyword naming convention.
+            # Get all methods from the class, including inherited ones except from DriverClient
+            methods = {
+                name: method
+                for name, method in vars(child_class).items()
+                if callable(method)  # Ensure that it is a callable method
+                and not name.startswith("_")  # Exclude private methods
+                and name != "cli"  # Exclude special cli method
+                and not method.__qualname__.startswith("DriverClient")  # Exclude DriverClient methods
+            }
 
-        Args:
-            obj: The object to introspect
-            prefix: Current prefix for nested keywords
-        """
-        # Ignore objects that are not callable
-        if obj is None:
-            return
+            # Generate keyword names for this child's methods
+            for method_name in methods:
+                keyword_name = f"{prefix}_{key}_{method_name}" if prefix else f"{key}_{method_name}"
+                logger.debug(f"get_nested_keywords: keyword_name: {keyword_name}")
+                yield keyword_name
 
-        for attr_name in dir(obj):
-            # Ignore private attributes
-            if attr_name.startswith("_"):
-                continue
+            # Recursively process nested children
+            if hasattr(child, "children"):
+                new_prefix = f"{prefix}_{key}" if prefix else key
+                yield from self._get_nested_keywords(child.children, new_prefix)
 
-            logger.warn(f"get_nested_keywords: attr_name: {attr_name}")
-            yield attr_name
-
-            # # Get the attribute metadata
-            # attr = getattr(obj, attr_name)
-            # # Concatenate the prefix with the attribute name to form the full keyword name
-            # full_name = f"{prefix}_{attr_name}" if prefix else attr_name
-
-            # # If it's a callable keyword method, yield the full name
-            # if callable(attr):
-            #     yield full_name
-            # # If it's an object, recursively get its keywords
-            # elif hasattr(attr, "__dict__") or hasattr(attr, "__slots__"):
-            #     yield from self._get_nested_keywords(attr, full_name)
-
-    def _get_client(self) -> Any:
+    def _get_client(self) -> DriverClient:
         """Get the client object, acquiring a lease if needed.
 
         Returns:
@@ -186,8 +205,13 @@ class JumpstarterLibrary:
         if self._client is not None:
             return self._client
 
+        # If we're not running in Robot Framework but have a stub client, return it
+        if not self._is_robot_running() and self._stub_client is not None:
+            return self._stub_client
+
+        # Otherwise, try to acquire a lease normally
         if self._lease is None:
-            logger.warn("get_client: acquiring lease")
+            logger.debug("get_client: acquiring lease")
             self._acquire_lease(
                 selector=self._selector, client_alias=self._client_alias, exporter_config=self._exporter_config
             )
@@ -212,20 +236,21 @@ class JumpstarterLibrary:
         yield "acquire_lease"
         yield "release_lease"
 
+        if not self._is_robot_running():
+            logger.info("get_keyword_names: Called by language server or documentation tool, skipping dynamic keywords")
+            return
+
         # Dynamic keywords from client object and its nested objects
         try:
             current = self._get_client()
-        except Error:
-            logger.warn("Unable to acquire lease, skipping dynamic keywords")
+        except Error as e:
+            logger.info(f"Unable to acquire lease, skipping dynamic keywords: {e}")
             return
 
-        logger.warn("get_keyword_names")
-
         # Get the keywords from the client object and its nested objects
-        for child in current.children.values():
-            yield from self._get_nested_keywords(child)
+        yield from self._get_nested_keywords(current.children)
 
-    def __getattr__(self, name: str) -> Callable:
+    def __getattr__(self, name: str) -> Optional[Callable]:
         """Dynamically create keyword methods from the client object.
 
         This method is called when a keyword is not found in the static
@@ -244,20 +269,32 @@ class JumpstarterLibrary:
         if name == "release_lease":
             return self.release_lease
 
-        # If we don't have a client, raise an error
-        if self._client is None:
-            raise Error(
-                "No lease acquired. You must call 'Acquire Lease', provide a selector in the library settings, "
-                "or specify an exporter_config for local testing."
-            )
+        # Try to detect if we're being called by Robot Framework or by a language server
+        if not self._is_robot_running():
+            logger.info("__getattr__: Called by language server or documentation tool, skipping dynamic keywords")
+            return None
 
-        # Track the current object as we navigate through the hierarchy
-        obj = self._client
+        # Get the client, which might be a stub client if not running in Robot Framework
+        client = self._get_client()
 
+        # Navigate the object hierarchy to find the attribute
+        return self._find_attribute_in_client(client, name)
+
+    def _find_attribute_in_client(self, obj: Any, name: str) -> Optional[Callable]:
+        """Find an attribute in the client object by navigating its hierarchy.
+
+        Args:
+            obj: The client object to navigate
+            name: The attribute name to find
+
+        Returns:
+            The callable attribute if found, None otherwise
+
+        Raises:
+            Error: If the attribute can't be found and we're running in Robot Framework
+        """
         # Split the name into parts to navigate the object hierarchy
         parts = name.split("_")
-
-        # Track the remaining parts to check
         remaining_parts = parts[:]
 
         # Keep navigating through the object hierarchy
@@ -275,15 +312,31 @@ class JumpstarterLibrary:
                     remaining_parts = remaining_parts[i:]
                     break
             else:
-                # If we didn't find any valid attribute, raise an error
-                raise Error(f"Cannot find attribute in path: {name}")
+                # If we didn't find any valid attribute, raise an error if running in RF
+                # Otherwise return None for language servers/docs tools
+                if self._is_robot_running():
+                    raise Error(f"Cannot find attribute in path: {name}")
+                return None
 
             # If we've navigated to a callable and there are no more parts, we're done
             if not remaining_parts and callable(obj):
                 return obj
 
-        # If we got here without finding a callable, it's an error
-        raise Error(f"Attribute '{name}' is not callable")
+        # No matching attribute found
+        return None
+
+    def _is_robot_running(self) -> bool:
+        """Utility method to check if Robot Framework is actually running.
+
+        This method uses the BuiltIn.robot_running property if available,
+        otherwise falls back to the _suite_running flag.
+
+        Returns:
+            True if Robot Framework is running tests, False otherwise
+        """
+        if self._builtin is not None:
+            return self._builtin.robot_running
+        return False
 
 
 class JumpstarterLibraryListener:
@@ -309,17 +362,7 @@ class JumpstarterLibraryListener:
             suite: The test suite object
             result: The test suite result object
         """
-        logger.warn("JumpstarterLibraryListener: Test Suite Started")
-        # if self.library._selector is not None:
-        #     logger.info(
-        #         "JumpstarterLibraryListener: Automatically acquiring Jumpstarter lease at the start of the test suite"
-        #     )
-        #     self.library._acquire_lease(selector=self.library._selector, client_alias=self.library._client_alias)
-        # elif self.library._exporter_config is not None:
-        #     logger.info(
-        #         "JumpstarterLibraryListener: Automatically creating local exporter at the start of the test suite"
-        #     )
-        #     self.library._acquire_lease(exporter_config=self.library._exporter_config)
+        logger.info("JumpstarterLibraryListener: Test Suite Started")
 
     def end_suite(self, suite, result) -> None:
         """Called at the end of the test suite.

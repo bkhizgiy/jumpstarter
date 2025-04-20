@@ -4,8 +4,8 @@ from datetime import timedelta
 from pathlib import Path
 from typing import ClassVar, Literal, Optional, Self
 
-import grpc
-import yaml
+import grpc  # type: ignore
+import yaml  # type: ignore
 from anyio.from_thread import BlockingPortal, start_blocking_portal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 

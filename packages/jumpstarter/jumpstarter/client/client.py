@@ -3,9 +3,9 @@ from contextlib import ExitStack, asynccontextmanager
 from graphlib import TopologicalSorter
 from uuid import UUID
 
-import grpc
+import grpc  # type: ignore
 from anyio.from_thread import BlockingPortal
-from google.protobuf import empty_pb2
+from google.protobuf import empty_pb2  # type: ignore
 from jumpstarter_protocol import jumpstarter_pb2_grpc
 
 from jumpstarter.client import DriverClient
