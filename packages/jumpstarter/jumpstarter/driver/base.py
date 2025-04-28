@@ -6,19 +6,22 @@ from __future__ import annotations
 
 import logging
 from abc import ABCMeta, abstractmethod
-from contextlib import asynccontextmanager
-from dataclasses import field
+from contextlib import asynccontextmanager, suppress
+from dataclasses import dataclass, field
 from inspect import isasyncgenfunction, iscoroutinefunction
 from itertools import chain
 from typing import Any
 from uuid import UUID, uuid4
 
 import aiohttp
-from anyio import to_thread
+from anyio import Event, TypedAttributeLookupError, to_thread
 from grpc import StatusCode
-from jumpstarter_protocol import jumpstarter_pb2, jumpstarter_pb2_grpc, router_pb2_grpc
+from jumpstarter_protocol import (
+    jumpstarter_pb2,
+    jumpstarter_pb2_grpc,
+    router_pb2_grpc,
+)
 from pydantic import TypeAdapter
-from pydantic.dataclasses import dataclass
 
 from .decorators import (
     MARKER_DRIVERCALL,
@@ -32,11 +35,13 @@ from jumpstarter.common.serde import decode_value, encode_value
 from jumpstarter.common.streams import (
     DriverStreamRequest,
     ResourceStreamRequest,
+    StreamRequestMetadata,
 )
 from jumpstarter.streams.aiohttp import AiohttpStreamReaderStream
-from jumpstarter.streams.common import create_memory_stream
-from jumpstarter.streams.metadata import MetadataStream
+from jumpstarter.streams.common import create_memory_stream, forward_stream
+from jumpstarter.streams.metadata import MetadataStream, MetadataStreamAttributes
 from jumpstarter.streams.progress import ProgressStream
+from jumpstarter.streams.router import RouterStream
 
 
 @dataclass(kw_only=True)
@@ -144,8 +149,22 @@ class Driver(
         except Exception as e:
             await context.abort(StatusCode.UNKNOWN, str(e))
 
+    async def Stream(self, _request_iterator, context):
+        request = StreamRequestMetadata(**dict(list(context.invocation_metadata()))).request
+        async with self.StreamManager(request, context) as stream:
+            metadata = []
+            with suppress(TypedAttributeLookupError):
+                metadata.extend(stream.extra(MetadataStreamAttributes.metadata).items())
+            await context.send_initial_metadata(metadata)
+
+            async with RouterStream(context=context) as remote:
+                async with forward_stream(remote, stream):
+                    event = Event()
+                    context.add_done_callback(lambda _: event.set())
+                    await event.wait()
+
     @asynccontextmanager
-    async def Stream(self, request, context):
+    async def StreamManager(self, request, context):
         """
         :meta private:
         """

@@ -1,12 +1,12 @@
 import logging
 from collections import deque
-from contextlib import AbstractContextManager, asynccontextmanager, contextmanager, suppress
+from contextlib import AbstractContextManager, asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
 from logging.handlers import QueueHandler
 from uuid import UUID
 
 import grpc
-from anyio import Event, TypedAttributeLookupError, sleep
+from anyio import sleep
 from anyio.from_thread import start_blocking_portal
 from jumpstarter_protocol import (
     jumpstarter_pb2,
@@ -18,9 +18,6 @@ from .logging import LogHandler
 from jumpstarter.common import Metadata, TemporarySocket
 from jumpstarter.common.streams import StreamRequestMetadata
 from jumpstarter.driver import Driver
-from jumpstarter.streams.common import forward_stream
-from jumpstarter.streams.metadata import MetadataStreamAttributes
-from jumpstarter.streams.router import RouterStream
 
 logger = logging.getLogger(__name__)
 
@@ -105,20 +102,10 @@ class Session(
         async for v in self[UUID(request.uuid)].StreamingDriverCall(request, context):
             yield v
 
-    async def Stream(self, _request_iterator, context):
+    async def Stream(self, request_iterator, context):
         request = StreamRequestMetadata(**dict(list(context.invocation_metadata()))).request
         logger.debug("Streaming(%s)", request)
-        async with self[request.uuid].Stream(request, context) as stream:
-            metadata = []
-            with suppress(TypedAttributeLookupError):
-                metadata.extend(stream.extra(MetadataStreamAttributes.metadata).items())
-            await context.send_initial_metadata(metadata)
-
-            async with RouterStream(context=context) as remote:
-                async with forward_stream(remote, stream):
-                    event = Event()
-                    context.add_done_callback(lambda _: event.set())
-                    await event.wait()
+        await self[request.uuid].Stream(request_iterator, context)
 
     async def LogStream(self, request, context):
         while True:
