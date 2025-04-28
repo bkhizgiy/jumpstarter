@@ -1,15 +1,23 @@
 from collections import OrderedDict, defaultdict
 from functools import reduce
 from graphlib import TopologicalSorter
+from types import SimpleNamespace
 from uuid import UUID
 
 import grpc
+from anyio import Event
 from google.protobuf import empty_pb2
-from jumpstarter_protocol import jumpstarter_pb2, jumpstarter_pb2_grpc
+from jumpstarter_protocol import (
+    jumpstarter_pb2,
+    jumpstarter_pb2_grpc,
+    router_pb2_grpc,
+)
 from pydantic.dataclasses import ConfigDict, dataclass
 
 from jumpstarter.common.exceptions import ConfigurationError
 from jumpstarter.driver import Driver
+from jumpstarter.streams.common import forward_stream
+from jumpstarter.streams.router import RouterStream
 
 
 class CompositeInterface:
@@ -57,7 +65,9 @@ class ExternalStub(Driver):
             super().__post_init__()
 
         self.channel = grpc.aio.insecure_channel(self.target)
-        self.stub = jumpstarter_pb2_grpc.ExporterServiceStub(self.channel)
+        self.stub = SimpleNamespace()
+        jumpstarter_pb2_grpc.ExporterServiceStub.__init__(self.stub, self.channel)
+        router_pb2_grpc.RouterServiceStub.__init__(self.stub, self.channel)
 
     def client(self) -> str:
         return self.report_.labels["jumpstarter.dev/client"]
@@ -68,6 +78,17 @@ class ExternalStub(Driver):
     async def StreamingDriverCall(self, request, context):
         async for response in self.stub.StreamingDriverCall(request):
             yield response
+
+    async def Stream(self, _request_iterator, context):
+        rcontext = self.stub.Stream(metadata=context.invocation_metadata())
+        await context.send_initial_metadata(await rcontext.initial_metadata())
+
+        async with RouterStream(context=context) as stream:
+            async with RouterStream(context=rcontext) as rstream:
+                async with forward_stream(rstream, stream):
+                    event = Event()
+                    context.add_done_callback(lambda _: event.set())
+                    await event.wait()
 
 
 @dataclass(kw_only=True)
