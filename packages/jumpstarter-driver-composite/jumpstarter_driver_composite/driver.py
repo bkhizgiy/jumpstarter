@@ -1,5 +1,4 @@
 from collections import OrderedDict, defaultdict
-from contextlib import asynccontextmanager
 from functools import reduce
 from graphlib import TopologicalSorter
 from uuid import UUID
@@ -53,20 +52,27 @@ class ExternalStub(Driver):
     target: str
     report_: jumpstarter_pb2.DriverInstanceReport
 
-    def client(self) -> str:
-        return self.report_.labels["jumpstarter.dev/client"]
-
-
-@dataclass(kw_only=True)
-class External(Driver):
-    target: str
-
     def __post_init__(self):
         if hasattr(super(), "__post_init__"):
             super().__post_init__()
 
         self.channel = grpc.aio.insecure_channel(self.target)
         self.stub = jumpstarter_pb2_grpc.ExporterServiceStub(self.channel)
+
+    def client(self) -> str:
+        return self.report_.labels["jumpstarter.dev/client"]
+
+    async def DriverCall(self, request, context):
+        return await self.stub.DriverCall(request)
+
+    async def StreamingDriverCall(self, request, context):
+        async for response in self.stub.StreamingDriverCall(request):
+            yield response
+
+
+@dataclass(kw_only=True)
+class External(Driver):
+    target: str
 
     def close(self):
         for child in self.children.values():
@@ -82,22 +88,6 @@ class External(Driver):
 
     def extra_labels(self) -> dict[str, str]:
         pass
-
-    async def DriverCall(self, request, context):
-        pass
-
-    async def StreamingDriverCall(self, request, context):
-        pass
-
-    @asynccontextmanager
-    async def Stream(self, request, context):
-        pass
-
-    def report(self, *, root=None, parent=None, name=None):
-        channel = grpc.insecure_channel(self.target)
-        stub = jumpstarter_pb2_grpc.ExporterServiceStub(channel)
-        response = stub.GetReport(empty_pb2.Empty())
-        return response.reports[0]
 
     def enumerate(self, *, root=None, parent=None, name=None):
         channel = grpc.insecure_channel(self.target)
@@ -134,7 +124,3 @@ class External(Driver):
             instances[index] = instance
 
         return instances.popitem(last=True)[1].enumerate(root=root, parent=parent, name=name)
-
-    @asynccontextmanager
-    async def resource(self, handle: str, timeout: int = 300):
-        pass
