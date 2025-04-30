@@ -9,9 +9,15 @@ from robot.libraries.BuiltIn import BuiltIn, RobotNotRunningError  # type: ignor
 
 from jumpstarter.client.base import DriverClient
 from jumpstarter.client.lease import Lease
+from jumpstarter.common.importlib import import_class
 from jumpstarter.common.utils import env
 from jumpstarter.config.client import ClientConfigV1Alpha1
-from jumpstarter.config.exporter import ExporterConfigV1Alpha1
+from jumpstarter.config.exporter import (
+    ExporterConfigV1Alpha1,
+    ExporterConfigV1Alpha1DriverInstance,
+    ExporterConfigV1Alpha1DriverInstanceBase,
+    ExporterConfigV1Alpha1DriverInstanceComposite,
+)
 
 
 @library(scope="GLOBAL", version="0.6.0")
@@ -76,22 +82,73 @@ class JumpstarterLibrary:
             logger.warn("Robot Framework is not running")
 
         # If we're not running a test suite, create a stub client for documentation/intellisense
-        if not self._is_robot_running() and self._exporter_config:
-            logger.debug("Creating stub client from exporter config")
-            self._create_stub_client()
+        # if not self._is_robot_running() and self._exporter_config:
+        #     logger.debug("Creating stub client from exporter config")
+        #     self._create_stub_client()
 
-    def _create_stub_client(self):
-        """Create a stub client from the exporter config for documentation/intellisense."""
-        if self._exporter_config and not self._is_robot_running():
+    def get_client_keywords(self, exporter: ExporterConfigV1Alpha1) -> Generator[str, None, None]:
+        """Create a list of keywords by analyzing the exporter configuration.
+
+        This method performs static analysis on the exporter configuration to generate
+        a list of available keywords. It traverses the driver tree structure and
+        extracts method names from each driver's client class.
+
+        Args:
+            exporter: The exporter configuration to analyze
+
+        Yields:
+            str: Available keywords in the format 'driver_name_method_name'
+        """
+
+        def get_client_methods(driver_type: str) -> set[str]:
+            """Get all public methods from a driver's client class."""
             try:
-                logger.debug(f"Creating stub client from exporter config: {self._exporter_config}")
-                # Load the exporter config
-                config = ExporterConfigV1Alpha1.load(self._exporter_config)
-                # Create a stub client from the exporter config
-                self._stub_client = config.create_client_stub(unsafe=True)
-                logger.debug("Successfully created stub client")
+                driver_class = import_class(driver_type, allow=[], unsafe=True)
+                client_class_name = driver_class.client()
+                client_class = import_class(client_class_name, allow=[], unsafe=True)
+                base_methods = set(dir(DriverClient))
+                return {
+                    name
+                    for name in dir(client_class)
+                    if callable(getattr(client_class, name))
+                    and not name.startswith("_")
+                    and name != "cli"
+                    and name not in base_methods
+                }
             except Exception as e:
-                raise Error(f"Failed to create stub client: {str(e)}") from e
+                raise Error(f"Error getting client methods for {driver_type}: {e}") from e
+
+        def process_driver(
+            name: str, driver: ExporterConfigV1Alpha1DriverInstance, prefix: str = ""
+        ) -> Generator[str, None, None]:
+            """Recursively process a driver and its children to generate keywords."""
+            # Get the driver type and its methods
+            if isinstance(driver.root, ExporterConfigV1Alpha1DriverInstanceBase):
+                logger.warn(f"Processing ExporterConfigV1Alpha1DriverInstanceBase driver: {name}")
+                driver_type = driver.root.type
+                logger.warn(f"Driver type: {driver_type}")
+                methods = get_client_methods(driver_type)
+                # Add keywords for this driver's methods
+                for method in methods:
+                    keyword = f"{prefix}{name}_{method}" if prefix else f"{name}_{method}"
+                    yield keyword
+
+                # Process children recursively
+                for child_name, child in driver.root.children.items():
+                    new_prefix = f"{prefix}{name}_" if prefix else f"{name}_"
+                    yield from process_driver(child_name, child, new_prefix)
+
+            elif isinstance(driver.root, ExporterConfigV1Alpha1DriverInstanceComposite):
+                logger.warn(f"Processing ExporterConfigV1Alpha1DriverInstanceComposite driver: {name}")
+                # Process all children of a composite driver
+                for child_name, child in driver.root.children.items():
+                    new_prefix = f"{prefix}{name}_" if prefix else f"{name}_"
+                    yield from process_driver(child_name, child, new_prefix)
+
+        # Process all top-level drivers
+        for name, driver in exporter.export.items():
+            logger.warn(f"Processing driver: {name}")
+            yield from process_driver(name, driver)
 
     def _acquire_lease(
         self, selector: Optional[str] = None, client_alias: Optional[str] = None, exporter_config: Optional[str] = None
@@ -208,11 +265,6 @@ class JumpstarterLibrary:
             logger.debug("get_client: returning existing client")
             return self._client
 
-        # If we have a stub client and Robot isn't running
-        if self._stub_client and not self._is_robot_running():
-            logger.debug("get_client: returning stub client")
-            return self._stub_client
-
         # Otherwise, try to acquire a lease normally
         if self._lease is None:
             logger.debug("get_client: acquiring lease")
@@ -240,14 +292,16 @@ class JumpstarterLibrary:
         yield "acquire_lease"
         yield "release_lease"
 
+        logger.warn("Discovered keywords:")
+        for keyword in self.get_client_keywords(ExporterConfigV1Alpha1.load(self._exporter_config)):
+            logger.warn(f"  {keyword}")
+
         # Dynamic keywords from client object and its nested objects
         try:
             client = self._get_client()
         except Error as e:
             logger.info(f"Unable to get driver client, skipping dynamic keywords: {e}")
             return
-
-        raise Error(f"Stub client returned because Robot Framework is not running: {client}")
 
         # Get the keywords from the client object and its nested objects
         yield from self._get_nested_keywords(client.children)

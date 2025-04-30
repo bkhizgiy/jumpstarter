@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from collections import OrderedDict, defaultdict
-from contextlib import ExitStack, asynccontextmanager, contextmanager, suppress
-from graphlib import TopologicalSorter
+from contextlib import asynccontextmanager, contextmanager, suppress
 from pathlib import Path
 from typing import Any, ClassVar, Literal, Optional, Self
-from uuid import uuid4
 
 import grpc  # type: ignore
 import yaml  # type: ignore
@@ -15,7 +12,6 @@ from pydantic import BaseModel, ConfigDict, Field, RootModel
 from .common import ObjectMeta
 from .grpc import call_credentials
 from .tls import TLSConfigV1Alpha1
-from jumpstarter.client.base import DriverClient
 from jumpstarter.common.grpc import aio_secure_channel, ssl_channel_credentials
 from jumpstarter.common.importlib import import_class
 from jumpstarter.driver import Driver
@@ -177,193 +173,6 @@ class ExporterConfigV1Alpha1(BaseModel):
             grpc_options=self.grpcOptions,
         ) as exporter:
             await exporter.serve()
-
-    def create_client_stub(self, allow: list[str] = None, unsafe: bool = False):
-        """Create a client stub for this exporter without requiring a connection.
-
-        This method generates a client stub by analyzing the exporter configuration
-        instead of querying the exporter service. This is useful for documentation,
-        intellisense, and testing purposes.
-
-        Args:
-            allow: List of allowed driver packages (default: empty list)
-            unsafe: Whether to allow unsafe drivers (default: False)
-
-        Returns:
-            DriverClient: The client stub for the exporter
-        """
-        from jumpstarter.client import DriverClient
-
-        # Use provided values or defaults
-        allow = allow or []
-
-        # Build a structure similar to what we'd get from GetReport
-        topo = defaultdict(list)
-        uuids = {}
-        driver_info = {}
-        clients = OrderedDict()
-        stack = ExitStack()
-
-        # Process driver instances and build the topology
-        self._process_driver_instances(self.export, topo, uuids, driver_info)
-
-        # Build clients in topological order
-        self._build_client_stubs(topo, driver_info, clients, stack, allow, unsafe)
-
-        # Return the root client (last one created)
-        if clients:
-            return clients.popitem(last=True)[1]
-        else:
-            # If no clients were created, return a base DriverClient
-            from jumpstarter.client.base import DriverClient
-
-            return DriverClient(
-                uuid=uuid4(),
-                labels={"jumpstarter.dev/name": "root"},
-                channel=None,
-                portal=None,
-                stack=stack.enter_context(ExitStack()),
-                children={},
-            )
-
-    def _process_driver_instances(
-        self,
-        instances: dict[str, ExporterConfigV1Alpha1DriverInstance],
-        topo: dict[int, list[int]],
-        uuids: dict[str, int],
-        driver_info: dict[int, dict[str, Any]],
-        parent_uuid: str | None = None,
-    ):
-        """Process driver instances to build topology and driver info.
-
-        Args:
-            instances: Dictionary of driver instances
-            topo: Topology dictionary
-            uuids: UUID to index mapping
-            driver_info: Driver information dictionary
-            parent_uuid: Parent UUID for hierarchical relationship
-        """
-        for name, instance in instances.items():
-            # Generate a UUID for this instance
-            instance_uuid = str(uuid4())
-            instance_index = len(driver_info)
-
-            # Track the UUID
-            uuids[instance_uuid] = instance_index
-
-            # Store parent relationship if exists
-            if parent_uuid is not None:
-                parent_index = uuids[parent_uuid]
-                topo[parent_index].append(instance_index)
-
-            # Extract the driver type
-            if isinstance(instance.root, ExporterConfigV1Alpha1DriverInstanceBase):
-                driver_type = instance.root.type
-                # Record this driver's info (similar to report)
-                driver_info[instance_index] = {
-                    "uuid": instance_uuid,
-                    "parent_uuid": parent_uuid or "",
-                    "type": driver_type,
-                    "name": name,
-                }
-
-                # Process any children
-                if instance.root.children:
-                    self._process_driver_instances(instance.root.children, topo, uuids, driver_info, instance_uuid)
-            elif isinstance(instance.root, ExporterConfigV1Alpha1DriverInstanceComposite):
-                # For composites, use a generic composite driver type
-                driver_info[instance_index] = {
-                    "uuid": instance_uuid,
-                    "parent_uuid": parent_uuid or "",
-                    "type": "jumpstarter_driver_composite.driver.Composite",
-                    "name": name,
-                }
-
-                # Process children
-                if instance.root.children:
-                    self._process_driver_instances(instance.root.children, topo, uuids, driver_info, instance_uuid)
-            elif isinstance(instance.root, ExporterConfigV1Alpha1DriverInstanceProxy):
-                # For proxies, use the Proxy driver type
-                driver_info[instance_index] = {
-                    "uuid": instance_uuid,
-                    "parent_uuid": parent_uuid or "",
-                    "type": "jumpstarter_driver_composite.driver.Proxy",
-                    "name": name,
-                }
-
-    def _build_client_stubs(
-        self,
-        topo: dict[int, list[int]],
-        driver_info: dict[int, dict[str, Any]],
-        clients: dict[int, DriverClient],
-        stack: ExitStack,
-        allow: list[str],
-        unsafe: bool,
-    ):
-        """Build client stubs in topological order.
-
-        Args:
-            topo: Topology dictionary
-            driver_info: Driver information dictionary
-            clients: Client dictionary to populate
-            stack: ExitStack for resource management
-            allow: List of allowed driver packages
-            unsafe: Whether to allow unsafe drivers
-        """
-        for index in TopologicalSorter(topo).static_order():
-            driver = driver_info[index]
-
-            # Determine the client class based on the driver type
-            client_class = self._get_client_class_for_driver(driver["type"], allow, unsafe)
-
-            # Create children dict for this client
-            children = {}
-            for child_index in topo[index]:
-                child = driver_info[child_index]
-                children[child["name"]] = clients[child_index]
-
-            # Create the client instance
-            client = client_class(
-                uuid=uuid4(),
-                labels={"jumpstarter.dev/name": driver["name"]},
-                # We don't have a real channel, portal or stack, but we need the properties
-                channel=None,
-                portal=None,
-                stack=stack.enter_context(ExitStack()),
-                children=children,
-            )
-
-            clients[index] = client
-
-    def _get_client_class_for_driver(self, driver_type, allow, unsafe):
-        """Get the client class for a given driver type.
-
-        Args:
-            driver_type: Driver type string
-            allow: List of allowed driver packages
-            unsafe: Whether to allow unsafe drivers
-
-        Returns:
-            The client class to use
-        """
-        # Convert driver type to client package path
-        driver_package = driver_type.split(".")
-        if driver_package[0].endswith("_driver"):
-            client_package = driver_package[0].replace("_driver", "_client") + ".client"
-        else:
-            # Use a default client if we can't determine the client package
-            client_package = "jumpstarter.client.base.DriverClient"
-
-        # Try to import the client class
-        try:
-            from jumpstarter.common.importlib import import_class
-
-            return import_class(client_package, allow, unsafe)
-        except ImportError:
-            # Fallback to base DriverClient
-            from jumpstarter.client.base import DriverClient
-
-            return DriverClient
 
 
 class ExporterConfigListV1Alpha1(BaseModel):

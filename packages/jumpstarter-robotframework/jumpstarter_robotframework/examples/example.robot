@@ -5,5 +5,5 @@ Library     jumpstarter_robotframework.JumpstarterLibrary    exporter_config=/et
 
 *** Test Cases ***
 Example Test Case
-    Power Cycle
+    Power On
     Release Lease
