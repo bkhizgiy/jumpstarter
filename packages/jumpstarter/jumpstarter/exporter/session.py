@@ -9,7 +9,6 @@ import grpc
 from anyio import sleep
 from anyio.from_thread import start_blocking_portal
 from jumpstarter_protocol import (
-    jumpstarter_pb2,
     jumpstarter_pb2_grpc,
     router_pb2_grpc,
 )
@@ -84,14 +83,7 @@ class Session(
 
     async def GetReport(self, request, context):
         logger.debug("GetReport()")
-        return jumpstarter_pb2.GetReportResponse(
-            uuid=str(self.uuid),
-            labels=self.labels,
-            reports=[
-                instance.report(parent=parent, name=name)
-                for (_, parent, name, instance) in self.root_device.enumerate()
-            ],
-        )
+        return await self.root_device.GetReport(request, context)
 
     async def DriverCall(self, request, context):
         logger.debug("DriverCall(uuid=%s, method=%s)", request.uuid, request.method)
