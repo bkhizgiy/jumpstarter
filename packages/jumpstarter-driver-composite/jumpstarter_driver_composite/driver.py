@@ -1,11 +1,15 @@
 from collections import OrderedDict, defaultdict
+from dataclasses import field
 from functools import reduce
 from graphlib import TopologicalSorter
+from multiprocessing import Condition, Process
 from types import SimpleNamespace
+from typing import Any
 from uuid import UUID
 
 import grpc
 from anyio import Event
+from anyio.from_thread import start_blocking_portal
 from google.protobuf import empty_pb2
 from jumpstarter_protocol import (
     jumpstarter_pb2,
@@ -14,7 +18,9 @@ from jumpstarter_protocol import (
 )
 from pydantic.dataclasses import ConfigDict, dataclass
 
+from jumpstarter.common import TemporarySocket
 from jumpstarter.common.exceptions import ConfigurationError
+from jumpstarter.common.importlib import import_class
 from jumpstarter.driver import Driver
 from jumpstarter.streams.common import forward_stream
 from jumpstarter.streams.router import RouterStream
@@ -93,15 +99,42 @@ class ExternalStub(Driver):
 
 @dataclass(kw_only=True)
 class External(Driver):
-    target: str
+    type: str
+    config: dict[str, Any] = field(default_factory=dict)
+
+    _socket: Any = field(default_factory=TemporarySocket)
+    _process: Process = field(init=False)
+
+    def __post_init__(self):
+        if hasattr(super(), "__post_init__"):
+            super().__post_init__()
+
+        self._port = f"unix://{self._socket.__enter__()}"
+        self._cond = Condition()
+        self._process = Process(target=self.run, args=(self._port, self._cond))
+        self._process.start()
+        with self._cond:
+            self._cond.wait()
+
+    def run(self, port, cond):
+        async def run_inner():
+            driver_class = import_class(self.type, [], True)
+            instance = driver_class(**self.config)
+            async with instance.serve_port_async(port):
+                with cond:
+                    cond.notify()
+                await Event().wait()
+
+        with start_blocking_portal() as portal:
+            portal.call(run_inner)
 
     def close(self):
-        for child in self.children.values():
-            child.close()
+        self._process.terminate()
+        self._process.join()
+        self._socket.__exit__(None, None, None)
 
     def reset(self):
-        for child in self.children.values():
-            child.reset()
+        pass
 
     @classmethod
     def client(cls) -> str:
@@ -111,7 +144,7 @@ class External(Driver):
         pass
 
     def enumerate(self, *, root=None, parent=None, name=None):
-        channel = grpc.insecure_channel(self.target)
+        channel = grpc.insecure_channel(self._port)
         stub = jumpstarter_pb2_grpc.ExporterServiceStub(channel)
         response = stub.GetReport(empty_pb2.Empty())
 
@@ -139,7 +172,7 @@ class External(Driver):
                 labels=report.labels,
                 children={reports[k].labels["jumpstarter.dev/name"]: instances[k] for k in topo[index]},
                 report_=report,
-                target=self.target,
+                target=self._port,
             )
 
             instances[index] = instance
