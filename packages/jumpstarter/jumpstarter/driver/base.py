@@ -93,6 +93,13 @@ class Driver(
     def extra_labels(self) -> dict[str, str]:
         return {}
 
+    async def GetReport(self, request, context):
+        return jumpstarter_pb2.GetReportResponse(
+            uuid=str(self.uuid),
+            labels=self.labels,
+            reports=[instance.report(parent=parent, name=name) for (_, parent, name, instance) in self.enumerate()],
+        )
+
     async def DriverCall(self, request, context):
         """
         :meta private:
