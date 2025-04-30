@@ -29,6 +29,7 @@ class ExporterConfigV1Alpha1DriverInstanceBase(BaseModel):
     type: str
     config: dict[str, Any] = Field(default_factory=dict)
     children: dict[str, ExporterConfigV1Alpha1DriverInstance] = Field(default_factory=dict)
+    sandbox: bool = False
 
 
 class ExporterConfigV1Alpha1DriverInstance(RootModel):
