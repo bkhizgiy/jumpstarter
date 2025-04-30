@@ -14,6 +14,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import aiohttp
+import grpc
 from anyio import Event, TypedAttributeLookupError, to_thread
 from grpc import StatusCode
 from jumpstarter_protocol import (
@@ -29,7 +30,7 @@ from .decorators import (
     MARKER_STREAMCALL,
     MARKER_STREAMING_DRIVERCALL,
 )
-from jumpstarter.common import Metadata
+from jumpstarter.common import Metadata, TemporarySocket
 from jumpstarter.common.resources import ClientStreamResource, PresignedRequestResource, Resource, ResourceMetadata
 from jumpstarter.common.serde import decode_value, encode_value
 from jumpstarter.common.streams import (
@@ -268,3 +269,23 @@ class Driver(
             await context.abort(StatusCode.NOT_FOUND, f"method {name} missing marker {marker}")
 
         return method
+
+    @asynccontextmanager
+    async def serve_port_async(self, port):
+        server = grpc.aio.server()
+        server.add_insecure_port(port)
+
+        jumpstarter_pb2_grpc.add_ExporterServiceServicer_to_server(self, server)
+        router_pb2_grpc.add_RouterServiceServicer_to_server(self, server)
+
+        await server.start()
+        try:
+            yield
+        finally:
+            await server.stop(grace=None)
+
+    @asynccontextmanager
+    async def serve_unix_async(self):
+        with TemporarySocket() as path:
+            async with self.serve_port_async(f"unix://{path}"):
+                yield path
