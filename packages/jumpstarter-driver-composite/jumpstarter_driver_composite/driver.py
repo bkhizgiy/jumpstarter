@@ -16,6 +16,7 @@ from jumpstarter_protocol import (
     jumpstarter_pb2_grpc,
     router_pb2_grpc,
 )
+from landlock import FSAccess, Ruleset
 from pydantic.dataclasses import ConfigDict, dataclass
 
 from jumpstarter.common import TemporarySocket
@@ -109,7 +110,7 @@ class External(Driver):
         if hasattr(super(), "__post_init__"):
             super().__post_init__()
 
-        self._port = f"unix://{self._socket.__enter__()}"
+        self._port = self._socket.__enter__()
         self._cond = Condition()
         self._process = Process(target=self.run, args=(self._port, self._cond))
         self._process.start()
@@ -117,10 +118,15 @@ class External(Driver):
             self._cond.wait()
 
     def run(self, port, cond):
+        rs = Ruleset()
+        rs.allow("/", rules=FSAccess.READ_DIR | FSAccess.READ_FILE)
+        rs.allow(str(port.parent))
+        rs.apply()
+
         async def run_inner():
             driver_class = import_class(self.type, [], True)
             instance = driver_class(**self.config)
-            async with instance.serve_port_async(port):
+            async with instance.serve_port_async(f"unix://{str(port)}"):
                 with cond:
                     cond.notify()
                 await Event().wait()
@@ -144,7 +150,7 @@ class External(Driver):
         pass
 
     def enumerate(self, *, root=None, parent=None, name=None):
-        channel = grpc.insecure_channel(self._port)
+        channel = grpc.insecure_channel(f"unix://{self._port}")
         stub = jumpstarter_pb2_grpc.ExporterServiceStub(channel)
         response = stub.GetReport(empty_pb2.Empty())
 
@@ -172,7 +178,7 @@ class External(Driver):
                 labels=report.labels,
                 children={reports[k].labels["jumpstarter.dev/name"]: instances[k] for k in topo[index]},
                 report_=report,
-                target=self._port,
+                target=f"unix://{self._port}",
             )
 
             instances[index] = instance
