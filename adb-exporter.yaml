@@ -1,0 +1,10 @@
+apiVersion: jumpstarter.dev/v1alpha1
+kind: ExporterConfig
+metadata:
+  name: local-exporter
+  namespace: default
+endpoint: ""
+token: ""
+export:
+  adb:
+    type: jumpstarter_driver_android.driver.AdbServer

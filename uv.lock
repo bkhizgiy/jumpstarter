@@ -10,6 +10,7 @@ members = [
     "jumpstarter-cli-admin",
     "jumpstarter-cli-common",
     "jumpstarter-cli-driver",
+    "jumpstarter-driver-android",
     "jumpstarter-driver-can",
     "jumpstarter-driver-composite",
     "jumpstarter-driver-corellium",
@@ -975,6 +976,7 @@ dependencies = [
     { name = "jumpstarter-cli-admin" },
     { name = "jumpstarter-cli-common" },
     { name = "jumpstarter-cli-driver" },
+    { name = "jumpstarter-driver-android" },
     { name = "jumpstarter-driver-can" },
     { name = "jumpstarter-driver-composite" },
     { name = "jumpstarter-driver-corellium" },
@@ -1008,6 +1010,7 @@ requires-dist = [
     { name = "jumpstarter-cli-admin", editable = "packages/jumpstarter-cli-admin" },
     { name = "jumpstarter-cli-common", editable = "packages/jumpstarter-cli-common" },
     { name = "jumpstarter-cli-driver", editable = "packages/jumpstarter-cli-driver" },
+    { name = "jumpstarter-driver-android", editable = "packages/jumpstarter-driver-android" },
     { name = "jumpstarter-driver-can", editable = "packages/jumpstarter-driver-can" },
     { name = "jumpstarter-driver-composite", editable = "packages/jumpstarter-driver-composite" },
     { name = "jumpstarter-driver-corellium", editable = "packages/jumpstarter-driver-corellium" },
@@ -1164,6 +1167,34 @@ dev = [
     { name = "pytest-anyio", specifier = ">=0.0.0" },
     { name = "pytest-asyncio", specifier = ">=0.0.0" },
     { name = "pytest-cov", specifier = ">=5.0.0" },
+]
+
+[[package]]
+name = "jumpstarter-driver-android"
+source = { editable = "packages/jumpstarter-driver-android" }
+dependencies = [
+    { name = "asyncclick" },
+    { name = "jumpstarter" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "trio" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "asyncclick", specifier = ">=8.1.7.2" },
+    { name = "jumpstarter", editable = "packages/jumpstarter" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.3.2" },
+    { name = "pytest-cov", specifier = ">=5.0.0" },
+    { name = "trio", specifier = ">=0.28.0" },
 ]
 
 [[package]]
