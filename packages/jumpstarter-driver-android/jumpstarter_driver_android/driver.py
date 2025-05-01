@@ -2,22 +2,24 @@ import os
 import shutil
 import subprocess
 from dataclasses import field
-from typing import Optional
+from typing import Optional, override
 
+from jumpstarter_driver_network.driver import TcpNetwork
 from pydantic.dataclasses import dataclass
 
 from jumpstarter.common.exceptions import ConfigurationError
-from jumpstarter.driver import Driver
 
 
 @dataclass(kw_only=True)
-class AdbServer(Driver):
+class AdbServer(TcpNetwork):
+    host: str = "127.0.0.1"
     port: int = 5037
     adb_executable: Optional[str] = None
 
     _adb_path: Optional[str] = field(init=False, default=None)
 
     @classmethod
+    @override
     def client(cls) -> str:
         return "jumpstarter_driver_android.client.AdbClient"
 

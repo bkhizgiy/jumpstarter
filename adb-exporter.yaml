@@ -8,3 +8,5 @@ token: ""
 export:
   adb:
     type: jumpstarter_driver_android.driver.AdbServer
+    config:
+      port: 3000

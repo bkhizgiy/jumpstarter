@@ -6,7 +6,12 @@ authors = [{ name = "Kirk Brauer", email = "kbrauer@hatci.com" }]
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
-dependencies = ["jumpstarter", "asyncclick>=8.1.7.2"]
+dependencies = [
+    "jumpstarter",
+    "jumpstarter-driver-network",
+    "asyncclick>=8.1.7.2",
+    "adbutils>=2.8.7",
+]
 
 [project.entry-points."jumpstarter.drivers"]
 MockPower = "jumpstarter_driver_android.driver:AdbServer"
