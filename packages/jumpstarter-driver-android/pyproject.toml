@@ -8,7 +8,9 @@ license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = [
     "jumpstarter",
+    "jumpstarter-driver-composite",
     "jumpstarter-driver-network",
+    "jumpstarter-driver-power",
     "asyncclick>=8.1.7.2",
     "adbutils>=2.8.7",
 ]

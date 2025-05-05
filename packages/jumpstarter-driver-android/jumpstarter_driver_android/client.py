@@ -6,7 +6,7 @@ from typing import Generator
 
 import adbutils
 import asyncclick as click
-from anyio import Event
+from jumpstarter_driver_composite.client import CompositeClient
 from jumpstarter_driver_network.adapters import TcpPortforwardAdapter
 
 from jumpstarter.client import DriverClient
@@ -35,7 +35,7 @@ class AdbClient(DriverClient):
             yield addr
 
     @contextmanager
-    def adb_client(self, host: str = "127.0.0.1", port: int = 5037) -> Generator[adbutils.AdbClient, None, None]:
+    def adb_client(self, host: str = "127.0.0.1", port: int = 5038) -> Generator[adbutils.AdbClient, None, None]:
         """
         Context manager to get an `adbutils.AdbClient`.
 
@@ -49,12 +49,11 @@ class AdbClient(DriverClient):
         with self.forward_adb(host, port) as addr:
             client = adbutils.AdbClient(host=addr[0], port=int(addr[1]))
             yield client
-            Event.wait()
 
     def cli(self):
         @click.command(context_settings={"ignore_unknown_options": True})
         @click.option("host", "-H", default="127.0.0.1", show_default=True, help="Local adb host to forward to.")
-        @click.option("port", "-P", type=int, default=5037, show_default=True, help="Local adb port to forward to.")
+        @click.option("port", "-P", type=int, default=5038, show_default=True, help="Local adb port to forward to.")
         @click.option("-a", is_flag=True, hidden=True)
         @click.option("-d", is_flag=True, hidden=True)
         @click.option("-e", is_flag=True, hidden=True)
@@ -65,7 +64,6 @@ class AdbClient(DriverClient):
             default="adb",
             show_default=True,
             help="Path to the ADB executable",
-            type=click.Path(exists=True, dir_okay=False, resolve_path=True),
         )
         @click.argument("args", nargs=-1)
         def adb(
@@ -93,7 +91,7 @@ class AdbClient(DriverClient):
             arguments and commands are not supported by the Jumpstarter adb client. These options include:
             -a, -d, -e, -L, --one-device.
 
-            The following adb commands are also not supported: start-server, kill-server, connect, disconnect,
+            The following adb commands are also not supported: connect, disconnect,
             reconnect, nodaemon, pair
             """
             # Throw exception for all unsupported arguments
@@ -103,8 +101,6 @@ class AdbClient(DriverClient):
                 )
             # Check for unsupported server management commands
             unsupported_commands = [
-                "start-server",
-                "kill-server",
                 "connect",
                 "disconnect",
                 "reconnect",
@@ -115,6 +111,15 @@ class AdbClient(DriverClient):
                 if arg in unsupported_commands:
                     raise click.UsageError(f"ADB command '{arg}' is not supported by the Jumpstarter ADB client")
 
+            if "start-server" in args:
+                remote_port = int(self.call("start_server"))
+                click.echo(f"ADB server started on remote port exporter:{remote_port}")
+                return 0
+            if "kill-server" in args:
+                remote_port = int(self.call("kill_server"))
+                click.echo(f"ADB server killed on remote port exporter:{remote_port}")
+                return 0
+
             # Forward the ADB server address and port and call ADB executable with args
             with self.forward_adb(host, port) as addr:
                 env = os.environ | {
@@ -122,8 +127,13 @@ class AdbClient(DriverClient):
                     "ANDROID_ADB_SERVER_PORT": str(addr[1]),
                 }
                 cmd = [adb, *args]
-                print(cmd)
                 process = subprocess.Popen(cmd, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, env=env)
                 return process.wait()
 
         return adb
+
+
+class AndroidClient(CompositeClient):
+    """Generic Android client for controlling Android devices/emulators."""
+
+    pass
