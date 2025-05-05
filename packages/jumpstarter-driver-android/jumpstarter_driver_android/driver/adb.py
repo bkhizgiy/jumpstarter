@@ -105,5 +105,5 @@ class AdbServer(TcpNetwork):
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Failed to execute adb: {e}")
 
-    def close(self):
-        self.kill_server()
+    # def close(self):
+    #     self.kill_server()

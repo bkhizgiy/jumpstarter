@@ -1,3 +1,4 @@
+import os
 import subprocess
 import threading
 from dataclasses import dataclass, field
@@ -10,6 +11,7 @@ from jumpstarter_driver_power.driver import PowerInterface
 
 from jumpstarter_driver_android.driver.adb import AdbServer
 from jumpstarter_driver_android.driver.options import AdbOptions, EmulatorOptions
+from jumpstarter_driver_android.driver.scrcpy import Scrcpy
 
 from jumpstarter.driver import Driver, export
 
@@ -31,6 +33,7 @@ class AndroidEmulator(Driver):
     def __init__(self, **kwargs):
         self.adb = AdbOptions.model_validate(kwargs.get("adb", {}))
         self.emulator = EmulatorOptions.model_validate(kwargs.get("emulator", {}))
+        self.log_level = kwargs.get("log_level", "INFO")
         if hasattr(super(), "__init__"):
             super().__init__()
 
@@ -38,8 +41,11 @@ class AndroidEmulator(Driver):
         if hasattr(super(), "__post_init__"):
             super().__post_init__()
 
-        self.children["adb"] = AdbServer(host=self.adb.host, port=self.adb.port, adb_path=self.adb.adb_path)
-        self.children["power"] = AndroidEmulatorPower(parent=self)
+        self.children["adb"] = AdbServer(
+            host=self.adb.host, port=self.adb.port, adb_path=self.adb.adb_path, log_level=self.log_level
+        )
+        self.children["scrcpy"] = Scrcpy(host=self.adb.host, port=self.adb.port, log_level=self.log_level)
+        self.children["power"] = AndroidEmulatorPower(parent=self, log_level=self.log_level)
 
 
 @dataclass(kw_only=True)
@@ -242,17 +248,25 @@ class AndroidEmulatorPower(PowerInterface, Driver):
         self._stderr_thread.start()
 
     @export
-    def off(self) -> None:
-        if self._process is not None:
+    def off(self) -> None:  # noqa: C901
+        if self._process is not None and self._process.returncode is None:
             # First, attempt to power off emulator using adb command
             try:
-                subprocess.run(
+                result = subprocess.run(
                     [self.parent.adb.adb_path, "-s", f"emulator-{self.parent.emulator.port}", "emu", "kill"],
                     check=True,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
+                    env={"ANDROID_ADB_SERVER_PORT": str(self.parent.adb.port), **dict(os.environ)},
                 )
+                # Print output and errors as debug
+                for line in result.stdout.splitlines():
+                    if line.strip():
+                        self.logger.debug(line)
+                for line in result.stderr.splitlines():
+                    if line.strip():
+                        self.logger.debug(line)
             except subprocess.CalledProcessError as e:
                 self.logger.error(f"Failed to power off Android emulator: {e}")
             # If the adb command fails, kill the process directly
@@ -261,9 +275,9 @@ class AndroidEmulatorPower(PowerInterface, Driver):
 
             # Wait up to 20 seconds for process to terminate after sending emu kill
             try:
-                self._process.wait(timeout=30)
+                self._process.wait(timeout=20)
             except TimeoutExpired:
-                self.logger.warning("Android emulator did not exit within 30 seconds after 'emu kill' command")
+                self.logger.warning("Android emulator did not exit within 20 seconds after 'emu kill' command")
                 # Attempt to kill the process directly
                 try:
                     self.logger.warning("Attempting to kill Android emulator process directly.")
