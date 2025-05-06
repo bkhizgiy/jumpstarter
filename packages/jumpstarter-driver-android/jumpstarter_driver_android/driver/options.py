@@ -143,6 +143,9 @@ class EmulatorOptions(BaseModel):
     qemu_args: List[str] = []
     props: Dict[str, str] = {}
 
+    # Additional environment variables
+    env: Dict[str, str] = {}
+
     @model_validator(mode="after")
     def validate_paths(self) -> "EmulatorOptions":
         path_fields = [

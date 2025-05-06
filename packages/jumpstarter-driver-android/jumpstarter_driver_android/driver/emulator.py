@@ -230,6 +230,14 @@ class AndroidEmulatorPower(PowerInterface, Driver):
         # Create the emulator command line options
         cmdline = self._make_emulator_command()
 
+        # Prepare environment variables
+        env = dict(os.environ)
+        env.update(self.parent.emulator.env)
+
+        self.logger.info("Starting with environment variables:")
+        for key, value in env.items():
+            self.logger.info(f"{key}: {value}")
+
         self.logger.info(f"Starting Android emulator with command: {' '.join(cmdline)}")
         self._process = subprocess.Popen(
             cmdline,
@@ -237,6 +245,7 @@ class AndroidEmulatorPower(PowerInterface, Driver):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=False,  # Keep as bytes for proper encoding handling
+            env=env,
         )
 
         # Process logs in separate threads

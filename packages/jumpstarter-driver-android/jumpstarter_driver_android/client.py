@@ -71,7 +71,7 @@ class AdbClientBase(DriverClient):
 
 
 class AdbClient(AdbClientBase):
-    """Power client for controlling power devices."""
+    """ADB client for interacting with Android devices."""
 
     def cli(self):
         @click.command(context_settings={"ignore_unknown_options": True})
@@ -101,6 +101,8 @@ class AdbClient(AdbClientBase):
             args: tuple[str, ...],
         ):
             """
+            Run adb using a local executable against the remote adb server.
+
             Run commands using a local adb executable against the remote adb server. This command is a wrapper around
             the adb command-line tool. It allows you to run adb commands against a remote ADB server tunneled through
             Jumpstarter.
@@ -182,9 +184,10 @@ class ScrcpyClient(AdbClientBase):
             args: tuple[str, ...],
         ):
             """
-            Run scrcpy using a local executable against the remote adb server. This command is a wrapper around
-            the scrcpy command-line tool. It allows you to run scrcpy against a remote Android device through
-            an ADB server tunneled via Jumpstarter.
+            Run scrcpy using a local executable against the remote adb server.
+
+            This command is a wrapper around the scrcpy command-line tool. It allows you to run scrcpy
+            against a remote Android device through an ADB server tunneled via Jumpstarter.
 
             When executing this command, the adb server address and port are forwarded to the local scrcpy executable.
             The adb server socket path is set in the environment variable ADB_SERVER_SOCKET, allowing scrcpy to

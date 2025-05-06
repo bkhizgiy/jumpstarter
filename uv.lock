@@ -1206,7 +1206,9 @@ dependencies = [
     { name = "adbutils" },
     { name = "asyncclick" },
     { name = "jumpstarter" },
+    { name = "jumpstarter-driver-composite" },
     { name = "jumpstarter-driver-network" },
+    { name = "jumpstarter-driver-power" },
 ]
 
 [package.dev-dependencies]
@@ -1221,7 +1223,9 @@ requires-dist = [
     { name = "adbutils", specifier = ">=2.8.7" },
     { name = "asyncclick", specifier = ">=8.1.7.2" },
     { name = "jumpstarter", editable = "packages/jumpstarter" },
+    { name = "jumpstarter-driver-composite", editable = "packages/jumpstarter-driver-composite" },
     { name = "jumpstarter-driver-network", editable = "packages/jumpstarter-driver-network" },
+    { name = "jumpstarter-driver-power", editable = "packages/jumpstarter-driver-power" },
 ]
 
 [package.metadata.requires-dev]
