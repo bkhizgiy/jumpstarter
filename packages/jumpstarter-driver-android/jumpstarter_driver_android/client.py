@@ -15,6 +15,12 @@ from jumpstarter_driver_network.adapters import TcpPortforwardAdapter
 from jumpstarter.client import DriverClient
 
 
+class AndroidClient(CompositeClient):
+    """Generic Android client for controlling Android devices/emulators."""
+
+    pass
+
+
 class AdbClientBase(DriverClient):
     """
     Base class for ADB clients. This class provides a context manager to
@@ -101,23 +107,26 @@ class AdbClient(AdbClientBase):
             args: tuple[str, ...],
         ):
             """
-            Run adb using a local executable against the remote adb server.
+            Run adb using a local adb binary against the remote adb server.
 
-            Run commands using a local adb executable against the remote adb server. This command is a wrapper around
-            the adb command-line tool. It allows you to run adb commands against a remote ADB server tunneled through
-            Jumpstarter.
+            This command is a wrapper around the adb command-line tool. It allows you to run regular adb commands
+            with an automatically forwarded adb server running on your Jumpstarter exporter.
 
-            When executing this command, the adb server address and port are forwarded to the local ADB executable. The
-            adb server address and port are set in the environment variables ANDROID_ADB_SERVER_ADDRESS and
-            ANDROID_ADB_SERVER_PORT, respectively. This allows the local ADB executable to communicate with the remote
-            adb server.
+            When executing this command, the exporter adb daemon is forwarded to a local port. The
+            adb server address and port are automatically set in the environment variables ANDROID_ADB_SERVER_ADDRESS
+            and ANDROID_ADB_SERVER_PORT, respectively. This configures your local adb client to communicate with the
+            remote adb server.
 
-            Most command line arguments and commands are passed directly to the adb executable. However, some
+            Most command line arguments and commands are passed directly to the adb CLI. However, some
             arguments and commands are not supported by the Jumpstarter adb client. These options include:
             -a, -d, -e, -L, --one-device.
 
-            The following adb commands are also not supported: connect, disconnect,
+            The following adb commands are also not supported in remote adb environments: connect, disconnect,
             reconnect, nodaemon, pair
+
+            When running start-server or kill-server, Jumpstarter will start or kill the adb server on the exporter.
+
+            Use the forward-adb command to forward the adb server address and port to a local port manually.
             """
             # Throw exception for all unsupported arguments
             if any([a, d, e, l, one_device]):
@@ -164,7 +173,7 @@ class AdbClient(AdbClientBase):
 
 
 class ScrcpyClient(AdbClientBase):
-    """Scrcpy client for controlling Android devices/emulators."""
+    """Scrcpy client for controlling Android devices remotely."""
 
     def cli(self):
         @click.command(context_settings={"ignore_unknown_options": True})
@@ -224,9 +233,3 @@ class ScrcpyClient(AdbClientBase):
                 return process.wait()
 
         return scrcpy
-
-
-class AndroidClient(CompositeClient):
-    """Generic Android client for controlling Android devices/emulators."""
-
-    pass

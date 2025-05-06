@@ -3,48 +3,32 @@ import subprocess
 import threading
 from dataclasses import dataclass, field
 from subprocess import TimeoutExpired
-from typing import IO, AsyncGenerator, Optional, override
+from typing import IO, AsyncGenerator, Optional
 
 from anyio.abc import Process
 from jumpstarter_driver_power.common import PowerReading
 from jumpstarter_driver_power.driver import PowerInterface
 
-from jumpstarter_driver_android.driver.adb import AdbServer
-from jumpstarter_driver_android.driver.options import AdbOptions, EmulatorOptions
-from jumpstarter_driver_android.driver.scrcpy import Scrcpy
+from jumpstarter_driver_android.driver.device import AndroidDevice
+from jumpstarter_driver_android.driver.options import EmulatorOptions
 
 from jumpstarter.driver import Driver, export
 
 
 @dataclass(kw_only=True)
-class AndroidEmulator(Driver):
+class AndroidEmulator(AndroidDevice):
     """
     AndroidEmulator class provides an interface to configure and manage an Android Emulator instance.
     """
 
-    adb: AdbOptions
     emulator: EmulatorOptions
 
-    @classmethod
-    @override
-    def client(cls) -> str:
-        return "jumpstarter_driver_android.client.AndroidClient"
-
     def __init__(self, **kwargs):
-        self.adb = AdbOptions.model_validate(kwargs.get("adb", {}))
         self.emulator = EmulatorOptions.model_validate(kwargs.get("emulator", {}))
-        self.log_level = kwargs.get("log_level", "INFO")
-        if hasattr(super(), "__init__"):
-            super().__init__()
+        super().__init__(**kwargs)
 
     def __post_init__(self):
-        if hasattr(super(), "__post_init__"):
-            super().__post_init__()
-
-        self.children["adb"] = AdbServer(
-            host=self.adb.host, port=self.adb.port, adb_path=self.adb.adb_path, log_level=self.log_level
-        )
-        self.children["scrcpy"] = Scrcpy(host=self.adb.host, port=self.adb.port, log_level=self.log_level)
+        super().__post_init__()
         self.children["power"] = AndroidEmulatorPower(parent=self, log_level=self.log_level)
 
 
@@ -233,6 +217,10 @@ class AndroidEmulatorPower(PowerInterface, Driver):
         # Prepare environment variables
         env = dict(os.environ)
         env.update(self.parent.emulator.env)
+
+        # Set the ADB server address and port
+        env["ANDROID_ADB_SERVER_PORT"] = str(self.parent.adb.port)
+        env["ANDROID_ADB_SERVER_ADDRESS"] = self.parent.adb.host
 
         self.logger.info("Starting with environment variables:")
         for key, value in env.items():
