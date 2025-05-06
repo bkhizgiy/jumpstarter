@@ -85,6 +85,7 @@ General-purpose utility drivers:
 
 ```{toctree}
 :hidden:
+android.md
 can.md
 corellium.md
 dutlink.md
