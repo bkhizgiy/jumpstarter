@@ -223,7 +223,7 @@ The `AndroidClient` provides a generic composite client for interacting with And
 
 #### CLI
 
-```plain
+```bash
 $ jmp shell --exporter-config ~/.config/jumpstarter/exporters/android-local.yaml
 
 ~/jumpstarter ⚡ local ➤ j android
@@ -252,7 +252,7 @@ This client provides a wrapper CLI around your local `adb` tool to provide addit
 Jumpstarter functionality such as automatic port forwarding and remote control
 of the ADB server on the exporter.
 
-```plain
+```bash
 ~/jumpstarter ⚡local ➤ j android adb --help
 Usage: j android adb [OPTIONS] [ARGS]...
 
@@ -306,7 +306,7 @@ The `ScrcpyClient` provides CLI integration with the [`scrcpy`](https://github.c
 Similar to the ADB client, the `ScrcpyClient` also provides a wrapper around
 the local `scrcpy` tool to automatically port-forward the ADB connection.
 
-```plain
+```bash
 ~/jumpstarter ⚡local ➤ j android scrcpy --help
 Usage: j android scrcpy [OPTIONS] [ARGS]...
 
