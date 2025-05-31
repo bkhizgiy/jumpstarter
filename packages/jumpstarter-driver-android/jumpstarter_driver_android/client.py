@@ -8,7 +8,7 @@ from threading import Event
 from typing import Generator
 
 import adbutils
-import asyncclick as click
+import click
 from jumpstarter_driver_composite.client import CompositeClient
 from jumpstarter_driver_network.adapters import TcpPortforwardAdapter
 
