@@ -1,13 +1,13 @@
 import os
 import subprocess
 import threading
-from dataclasses import dataclass, field
+from dataclasses import field
 from subprocess import TimeoutExpired
-from typing import IO, AsyncGenerator, Optional
+from typing import IO, AsyncGenerator
 
-from anyio.abc import Process
 from jumpstarter_driver_power.common import PowerReading
 from jumpstarter_driver_power.driver import PowerInterface
+from pydantic.dataclasses import dataclass
 
 from jumpstarter_driver_android.driver.device import AndroidDevice
 from jumpstarter_driver_android.driver.options import EmulatorOptions
@@ -21,24 +21,27 @@ class AndroidEmulator(AndroidDevice):
     AndroidEmulator class provides an interface to configure and manage an Android Emulator instance.
     """
 
-    emulator: EmulatorOptions
-
-    def __init__(self, **kwargs):
-        self.emulator = EmulatorOptions.model_validate(kwargs.get("emulator", {}))
-        super().__init__(**kwargs)
+    emulator: EmulatorOptions = field(default_factory=EmulatorOptions)
 
     def __post_init__(self):
-        super().__post_init__()
-        self.children["power"] = AndroidEmulatorPower(parent=self, log_level=self.log_level)
+        if hasattr(super(), "__post_init__"):
+            super().__post_init__()
+
+        # Add the android emulator power driver
+        self.children["power"] = AndroidEmulatorPower(parent=self)
 
 
 @dataclass(kw_only=True)
 class AndroidEmulatorPower(PowerInterface, Driver):
     parent: AndroidEmulator
 
-    _process: Optional[Process] = field(init=False, repr=False, compare=False, default=None)
-    _log_thread: Optional[threading.Thread] = field(init=False, repr=False, compare=False, default=None)
-    _stderr_thread: Optional[threading.Thread] = field(init=False, repr=False, compare=False, default=None)
+    def __post_init__(self):
+        if hasattr(super(), "__post_init__"):
+            super().__post_init__()
+
+        self._process = None
+        self._log_thread = None
+        self._stderr_thread = None
 
     def _process_logs(self, pipe: IO[bytes], is_stderr: bool = False) -> None:
         """Process logs from the emulator and redirect them to the Python logger."""
@@ -88,7 +91,13 @@ class AndroidEmulatorPower(PowerInterface, Driver):
         # Add emulator arguments from EmulatorArguments
         args = self.parent.emulator
 
-        # System/Core Arguments
+        # Core Configuration
+        cmdline += ["-avd-arch", args.avd_arch] if args.avd_arch else []
+        cmdline += ["-id", args.id] if args.id else []
+        cmdline += ["-cores", str(args.cores)] if args.cores else []
+        cmdline += ["-memory", str(args.memory)] if args.memory else []
+
+        # System Images and Storage
         cmdline += ["-sysdir", args.sysdir] if args.sysdir else []
         cmdline += ["-system", args.system] if args.system else []
         cmdline += ["-vendor", args.vendor] if args.vendor else []
@@ -99,109 +108,162 @@ class AndroidEmulatorPower(PowerInterface, Driver):
         cmdline += ["-cache", args.cache] if args.cache else []
         cmdline += ["-cache-size", str(args.cache_size)] if args.cache_size else []
         cmdline += ["-no-cache"] if args.no_cache else []
-        cmdline += ["-cores", str(args.cores)] if args.cores else []
+        cmdline += ["-datadir", args.datadir] if args.datadir else []
+        cmdline += ["-initdata", args.initdata] if args.initdata else []
 
-        # Boot/Snapshot Control
-        cmdline += ["-delay-adb"] if args.delay_adb else []
-        cmdline += ["-quit-after-boot", str(args.quit_after_boot)] if args.quit_after_boot else []
+        # Snapshot Management
+        cmdline += ["-snapstorage", args.snapstorage] if args.snapstorage else []
+        cmdline += ["-no-snapstorage"] if args.no_snapstorage else []
+        cmdline += ["-snapshot", args.snapshot] if args.snapshot else []
+        cmdline += ["-no-snapshot"] if args.no_snapshot else []
+        cmdline += ["-no-snapshot-save"] if args.no_snapshot_save else []
+        cmdline += ["-no-snapshot-load"] if args.no_snapshot_load else []
         cmdline += ["-force-snapshot-load"] if args.force_snapshot_load else []
         cmdline += ["-no-snapshot-update-time"] if args.no_snapshot_update_time else []
+        cmdline += ["-snapshot-list"] if args.snapshot_list else []
         cmdline += ["-qcow2-for-userdata"] if args.qcow2_for_userdata else []
 
-        # Network/Communication
-        cmdline += ["-wifi-client-port", str(args.wifi_client_port)] if args.wifi_client_port else []
-        cmdline += ["-wifi-server-port", str(args.wifi_server_port)] if args.wifi_server_port else []
-        cmdline += ["-net-tap", args.net_tap] if args.net_tap else []
-        cmdline += ["-net-tap-script-up", args.net_tap_script_up] if args.net_tap_script_up else []
-        cmdline += ["-net-tap-script-down", args.net_tap_script_down] if args.net_tap_script_down else []
-
-        # Display/UI
+        # Display and GPU
+        cmdline += ["-no-window"] if args.no_window else []
+        cmdline += ["-gpu", args.gpu] if args.gpu else []
+        cmdline += ["-no-boot-anim"] if args.no_boot_anim else []
+        cmdline += ["-skin", args.skin] if args.skin else []
+        cmdline += ["-skindir", args.skindir] if args.skindir else []
+        cmdline += ["-no-skin"] if args.no_skin else []
         cmdline += ["-dpi-device", str(args.dpi_device)] if args.dpi_device else []
         cmdline += ["-fixed-scale"] if args.fixed_scale else []
+        cmdline += ["-scale", args.scale] if args.scale else []
         cmdline += ["-vsync-rate", str(args.vsync_rate)] if args.vsync_rate else []
-        for name, file in args.virtualscene_poster.items():
-            cmdline += ["-virtualscene-poster", f"{name}={file}"]
-
-        # Audio
-        cmdline += ["-no-audio"] if args.no_audio else []
-        cmdline += ["-audio", args.audio] if args.audio else []
-        cmdline += ["-allow-host-audio"] if args.allow_host_audio else []
-
-        # Locale/Language
-        cmdline += ["-change-language", args.change_language] if args.change_language else []
-        cmdline += ["-change-country", args.change_country] if args.change_country else []
-        cmdline += ["-change-locale", args.change_locale] if args.change_locale else []
-
-        # Additional Display/UI options
         cmdline += ["-qt-hide-window"] if args.qt_hide_window else []
         for display in args.multidisplay:
             cmdline += ["-multidisplay", ",".join(map(str, display))]
         cmdline += ["-no-location-ui"] if args.no_location_ui else []
         cmdline += ["-no-hidpi-scaling"] if args.no_hidpi_scaling else []
         cmdline += ["-no-mouse-reposition"] if args.no_mouse_reposition else []
+        for name, file in args.virtualscene_poster.items():
+            cmdline += ["-virtualscene-poster", f"{name}={file}"]
+        cmdline += ["-guest-angle"] if args.guest_angle else []
+        cmdline += ["-window-size", args.window_size] if args.window_size else []
+        cmdline += ["-screen", args.screen] if args.screen else []
+        cmdline += ["-use-host-vulkan"] if args.use_host_vulkan else []
+        cmdline += ["-share-vid"] if args.share_vid else []
+        cmdline += ["-hotplug-multi-display"] if args.hotplug_multi_display else []
 
-        # Additional System Control
+        # Network Configuration
+        cmdline += ["-wifi-client-port", str(args.wifi_client_port)] if args.wifi_client_port else []
+        cmdline += ["-wifi-server-port", str(args.wifi_server_port)] if args.wifi_server_port else []
+        cmdline += ["-net-tap", args.net_tap] if args.net_tap else []
+        cmdline += ["-net-tap-script-up", args.net_tap_script_up] if args.net_tap_script_up else []
+        cmdline += ["-net-tap-script-down", args.net_tap_script_down] if args.net_tap_script_down else []
+        cmdline += ["-net-socket", args.net_socket] if args.net_socket else []
+        cmdline += ["-dns-server", args.dns_server] if args.dns_server else []
+        cmdline += ["-http-proxy", args.http_proxy] if args.http_proxy else []
+        cmdline += ["-netdelay", args.netdelay] if args.netdelay else []
+        cmdline += ["-netspeed", args.netspeed] if args.netspeed else []
+        cmdline += ["-port", str(args.port)] if args.port else []
+        cmdline += ["-ports", args.ports] if args.ports else []
+        cmdline += ["-netfast"] if args.netfast else []
+        cmdline += ["-shared-net-id", str(args.shared_net_id)] if args.shared_net_id else []
+        cmdline += ["-wifi-tap", args.wifi_tap] if args.wifi_tap else []
+        cmdline += ["-wifi-tap-script-up", args.wifi_tap_script_up] if args.wifi_tap_script_up else []
+        cmdline += ["-wifi-tap-script-down", args.wifi_tap_script_down] if args.wifi_tap_script_down else []
+        cmdline += ["-wifi-socket", args.wifi_socket] if args.wifi_socket else []
+        cmdline += ["-vmnet-bridged", args.vmnet_bridged] if args.vmnet_bridged else []
+        cmdline += ["-vmnet-shared"] if args.vmnet_shared else []
+        cmdline += ["-vmnet-start-address", args.vmnet_start_address] if args.vmnet_start_address else []
+        cmdline += ["-vmnet-end-address", args.vmnet_end_address] if args.vmnet_end_address else []
+        cmdline += ["-vmnet-subnet-mask", args.vmnet_subnet_mask] if args.vmnet_subnet_mask else []
+        cmdline += ["-vmnet-isolated"] if args.vmnet_isolated else []
+        cmdline += ["-wifi-user-mode-options", args.wifi_user_mode_options] if args.wifi_user_mode_options else []
+        cmdline += (
+            ["-network-user-mode-options", args.network_user_mode_options] if args.network_user_mode_options else []
+        )
+        cmdline += ["-wifi-mac-address", args.wifi_mac_address] if args.wifi_mac_address else []
+        cmdline += ["-no-ethernet"] if args.no_ethernet else []
+
+        # Audio Configuration
+        cmdline += ["-no-audio"] if args.no_audio else []
+        cmdline += ["-audio", args.audio] if args.audio else []
+        cmdline += ["-allow-host-audio"] if args.allow_host_audio else []
+        cmdline += ["-radio", args.radio] if args.radio else []
+
+        # Camera Configuration
+        cmdline += ["-camera-back", args.camera_back] if args.camera_back else []
+        cmdline += ["-camera-front", args.camera_front] if args.camera_front else []
+        cmdline += ["-legacy-fake-camera"] if args.legacy_fake_camera else []
+        cmdline += ["-camera-hq-edge"] if args.camera_hq_edge else []
+
+        # Localization
+        cmdline += ["-timezone", args.timezone] if args.timezone else []
+        cmdline += ["-change-language", args.change_language] if args.change_language else []
+        cmdline += ["-change-country", args.change_country] if args.change_country else []
+        cmdline += ["-change-locale", args.change_locale] if args.change_locale else []
+
+        # Security
+        cmdline += ["-selinux", args.selinux] if args.selinux else []
+        cmdline += ["-skip-adb-auth"] if args.skip_adb_auth else []
+
+        # Hardware Acceleration
+        cmdline += ["-accel", args.accel] if args.accel else []
+        cmdline += ["-no-accel"] if args.no_accel else []
+        cmdline += ["-engine", args.engine] if args.engine else []
+        cmdline += ["-ranchu"] if args.ranchu else []
+        cmdline += ["-cpu-delay", str(args.cpu_delay)] if args.cpu_delay else []
+
+        # Debugging and Monitoring
+        cmdline += ["-verbose"] if args.verbose else []
+        cmdline += ["-show-kernel"] if args.show_kernel else []
+        cmdline += ["-logcat", args.logcat] if args.logcat else []
+        cmdline += ["-logcat-output", args.logcat_output] if args.logcat_output else []
+        cmdline += ["-debug", args.debug_tags] if args.debug_tags else []
+        cmdline += ["-tcpdump", args.tcpdump] if args.tcpdump else []
         cmdline += ["-detect-image-hang"] if args.detect_image_hang else []
-        for feature, enabled in args.feature.items():
-            cmdline += ["-feature", f"{feature}={'on' if enabled else 'off'}"]
-        cmdline += ["-icc-profile", args.icc_profile] if args.icc_profile else []
-        cmdline += ["-sim-access-rules-file", args.sim_access_rules_file] if args.sim_access_rules_file else []
-        cmdline += ["-phone-number", args.phone_number] if args.phone_number else []
+        cmdline += ["-save-path", args.save_path] if args.save_path else []
+        cmdline += ["-metrics-to-console"] if args.metrics_to_console else []
+        cmdline += ["-metrics-collection"] if args.metrics_collection else []
+        cmdline += ["-metrics-to-file", args.metrics_to_file] if args.metrics_to_file else []
+        cmdline += ["-no-metrics"] if args.no_metrics else []
+        cmdline += ["-perf-stat", args.perf_stat] if args.perf_stat else []
+        cmdline += ["-no-nested-warnings"] if args.no_nested_warnings else []
+        cmdline += ["-no-direct-adb"] if args.no_direct_adb else []
+        cmdline += ["-check-snapshot-loadable", args.check_snapshot_loadable] if args.check_snapshot_loadable else []
 
-        # Additional Network/gRPC options
+        # gRPC Configuration
         cmdline += ["-grpc-port", str(args.grpc_port)] if args.grpc_port else []
         cmdline += ["-grpc-tls-key", args.grpc_tls_key] if args.grpc_tls_key else []
         cmdline += ["-grpc-tls-cert", args.grpc_tls_cert] if args.grpc_tls_cert else []
         cmdline += ["-grpc-tls-ca", args.grpc_tls_ca] if args.grpc_tls_ca else []
         cmdline += ["-grpc-use-token"] if args.grpc_use_token else []
         cmdline += ["-grpc-use-jwt"] if args.grpc_use_jwt else []
+        cmdline += ["-grpc-allowlist", args.grpc_allowlist] if args.grpc_allowlist else []
+        cmdline += ["-idle-grpc-timeout", str(args.idle_grpc_timeout)] if args.idle_grpc_timeout else []
+        cmdline += ["-grpc-ui"] if args.grpc_ui else []
 
-        # Existing arguments
-        cmdline += ["-no-boot-anim"] if args.no_boot_anim else []
-        cmdline += ["-no-snapshot"] if args.no_snapshot else []
-        cmdline += ["-no-snapshot-load"] if args.no_snapshot_load else []
-        cmdline += ["-no-snapshot-save"] if args.no_snapshot_save else []
-        cmdline += ["-no-window"] if args.no_window else []
-        cmdline += ["-gpu", args.gpu] if args.gpu else []
-        cmdline += ["-memory", str(args.memory)] if args.memory else []
-        cmdline += ["-partition-size", str(args.partition_size)] if args.partition_size else []
-        cmdline += ["-sdcard", args.sdcard] if args.sdcard else []
-        cmdline += ["-skin", args.skin] if args.skin else []
-        cmdline += ["-timezone", args.timezone] if args.timezone else []
-        cmdline += ["-verbose"] if args.verbose else []
-        cmdline += ["-writable-system"] if args.writable_system else []
-        cmdline += ["-show-kernel"] if args.show_kernel else []
-        cmdline += ["-logcat", args.logcat] if args.logcat else []
-        cmdline += ["-camera-back", args.camera_back] if args.camera_back else []
-        cmdline += ["-camera-front", args.camera_front] if args.camera_front else []
-        cmdline += ["-selinux", args.selinux] if args.selinux else []
-        cmdline += ["-dns-server", args.dns_server] if args.dns_server else []
-        cmdline += ["-http-proxy", args.http_proxy] if args.http_proxy else []
-        cmdline += ["-netdelay", args.netdelay] if args.netdelay else []
-        cmdline += ["-netspeed", args.netspeed] if args.netspeed else []
-        cmdline += ["-port", str(args.port)] if args.port else []
-        cmdline += ["-tcpdump", args.tcpdump] if args.tcpdump else []
-        cmdline += ["-accel", args.accel] if args.accel else []
-        cmdline += ["-engine", args.engine] if args.engine else []
-        cmdline += ["-no-accel"] if args.no_accel else []
-        cmdline += ["-gpu", args.gpu_mode] if args.gpu_mode else []
-        cmdline += ["-wipe-data"] if args.wipe_data else []
-        cmdline += ["-debug", args.debug_tags] if args.debug_tags else []
-
-        # Advanced System Arguments
+        # Advanced System Configuration
         cmdline += ["-acpi-config", args.acpi_config] if args.acpi_config else []
         for key, value in args.append_userspace_opt.items():
             cmdline += ["-append-userspace-opt", f"{key}={value}"]
-        cmdline += ["-guest-angle"] if args.guest_angle else []
+        for feature, enabled in args.feature.items():
+            cmdline += ["-feature", f"{feature}={'on' if enabled else 'off'}"]
+        cmdline += ["-icc-profile", args.icc_profile] if args.icc_profile else []
+        cmdline += ["-sim-access-rules-file", args.sim_access_rules_file] if args.sim_access_rules_file else []
+        cmdline += ["-phone-number", args.phone_number] if args.phone_number else []
         if args.usb_passthrough:
             cmdline += ["-usb-passthrough"] + list(map(str, args.usb_passthrough))
-        cmdline += ["-save-path", args.save_path] if args.save_path else []
         cmdline += ["-waterfall", args.waterfall] if args.waterfall else []
         cmdline += ["-restart-when-stalled"] if args.restart_when_stalled else []
+        cmdline += ["-wipe-data"] if args.wipe_data else []
+        cmdline += ["-delay-adb"] if args.delay_adb else []
+        cmdline += ["-quit-after-boot", str(args.quit_after_boot)] if args.quit_after_boot else []
+        cmdline += ["-android-serialno", args.android_serialno] if args.android_serialno else []
+        cmdline += ["-systemui-renderer", args.systemui_renderer] if args.systemui_renderer else []
 
-        # Add any remaining QEMU arguments at the end
+        # QEMU Configuration
         if args.qemu_args:
             cmdline += ["-qemu"] + args.qemu_args
+        for key, value in args.props.items():
+            cmdline += ["-prop", f"{key}={value}"]
+        cmdline += ["-adb-path", args.adb_path] if args.adb_path else []
 
         return cmdline
 
@@ -221,10 +283,6 @@ class AndroidEmulatorPower(PowerInterface, Driver):
         # Set the ADB server address and port
         env["ANDROID_ADB_SERVER_PORT"] = str(self.parent.adb.port)
         env["ANDROID_ADB_SERVER_ADDRESS"] = self.parent.adb.host
-
-        self.logger.info("Starting with environment variables:")
-        for key, value in env.items():
-            self.logger.info(f"{key}: {value}")
 
         self.logger.info(f"Starting Android emulator with command: {' '.join(cmdline)}")
         self._process = subprocess.Popen(
@@ -301,7 +359,8 @@ class AndroidEmulatorPower(PowerInterface, Driver):
 
     @export
     async def read(self) -> AsyncGenerator[PowerReading, None]:
-        pass
+        yield PowerReading(voltage=0.0, current=0.0)
+        return
 
     def close(self):
         self.off()

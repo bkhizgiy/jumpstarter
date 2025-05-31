@@ -85,17 +85,18 @@ class AdbServer(TcpNetwork):
         if hasattr(super(), "__post_init__"):
             super().__post_init__()
 
-        if self.port < 0 or self.port > 65535:
-            raise ConfigurationError(f"Invalid port number: {self.port}")
         if not isinstance(self.port, int):
             raise ConfigurationError(f"Port must be an integer: {self.port}")
+
+        if self.port < 0 or self.port > 65535:
+            raise ConfigurationError(f"Invalid port number: {self.port}")
 
         self.logger.info(f"ADB server will run on port {self.port}")
 
         if self.adb_path == "adb":
             self.adb_path = shutil.which("adb")
             if not self.adb_path:
-                raise ConfigurationError(f"ADB executable '{self.adb_executable}' not found in PATH.")
+                raise ConfigurationError(f"ADB executable '{self.adb_path}' not found in PATH.")
 
         try:
             result = subprocess.run(
@@ -104,6 +105,3 @@ class AdbServer(TcpNetwork):
             self._print_output(result.stdout, debug=True)
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Failed to execute adb: {e}")
-
-    # def close(self):
-    #     self.kill_server()

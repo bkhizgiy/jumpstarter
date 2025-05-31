@@ -1,5 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import field
 from typing import override
+
+from pydantic.dataclasses import dataclass
 
 from jumpstarter_driver_android.driver.adb import AdbServer
 from jumpstarter_driver_android.driver.options import AdbOptions
@@ -19,14 +21,9 @@ class AndroidDevice(Driver):
     def client(cls) -> str:
         return "jumpstarter_driver_android.client.AndroidClient"
 
-    adb: AdbOptions
-    disable_scrcpy: bool = False
-    disable_adb: bool = False
-
-    def __init__(self, **kwargs):
-        self.adb = AdbOptions.model_validate(kwargs.get("adb", {}))
-        if hasattr(super(), "__init__"):
-            super().__init__(**kwargs)
+    adb: AdbOptions = field(default_factory=AdbOptions)
+    disable_scrcpy: bool = field(default=False)
+    disable_adb: bool = field(default=False)
 
     def __post_init__(self):
         if hasattr(super(), "__post_init__"):
