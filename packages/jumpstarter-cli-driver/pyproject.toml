@@ -10,7 +10,7 @@ authors = [
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
-dependencies = ["jumpstarter-cli-common", "asyncclick>=8.1.7.2"]
+dependencies = ["jumpstarter-cli-common", "click>=8.1.7.2"]
 
 [dependency-groups]
 dev = [
@@ -35,5 +35,8 @@ source = "vcs"
 raw-options = { 'root' = '../../' }
 
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling", "hatch-vcs", "hatch-pin-jumpstarter"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.hooks.pin_jumpstarter]
+name = "pin_jumpstarter"

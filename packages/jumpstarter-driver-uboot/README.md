@@ -6,8 +6,9 @@ it should be configured with backing power and serial drivers.
 
 ## Installation
 
-```shell
-pip install jumpstarter-driver-uboot
+```{code-block} console
+:substitutions:
+$ pip3 install --extra-index-url {{index_url}} jumpstarter-driver-uboot
 ```
 
 ## Configuration

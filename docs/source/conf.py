@@ -6,20 +6,17 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import asyncio
 import os
 import sys
 
-import requests
+from jumpstarter_cli_admin.controller import get_latest_compatible_controller_version
 
 sys.path.insert(0, os.path.abspath("../.."))
 
 project = "jumpstarter"
 copyright = "2025, Jumpstarter Contributors"
 author = "Jumpstarter Contributors"
-
-controller_version = requests.get(
-    "https://quay.io/api/v1/repository/jumpstarter-dev/helm/jumpstarter/tag/", params={"limit": 1}
-).json()["tags"][0]["name"]
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -32,7 +29,7 @@ extensions = [
     "sphinx.ext.doctest",
     "sphinx_click",
     "sphinx_substitution_extensions",
-    "sphinx_multiversion",
+    "sphinx_copybutton"
 ]
 
 templates_path = ["_templates"]
@@ -54,6 +51,27 @@ html_logo = "_static/img/logo-light-theme.svg"
 html_favicon = "_static/img/favicon.png"
 html_show_sphinx = False
 
+
+def get_controller_version():
+    name = os.getenv("SPHINX_MULTIVERSION_NAME")
+    if name == "main" or name is None:
+        version = None
+    elif name.startswith("release-"):
+        version = name.removeprefix("release-")
+    else:
+        version = None
+
+    return asyncio.run(get_latest_compatible_controller_version(client_version=version))
+
+
+def get_index_url():
+    name = os.getenv("SPHINX_MULTIVERSION_NAME")
+    if name is None:
+        return "https://pkg.jumpstarter.dev/simple"
+    else:
+        return "https://pkg.jumpstarter.dev/{}/simple".format(name)
+
+
 myst_heading_anchors = 3
 myst_enable_extensions = [
     "substitution",
@@ -61,7 +79,8 @@ myst_enable_extensions = [
 myst_substitutions = {
     "requires_python": ">=3.11",
     "version": "latest",
-    "controller_version": controller_version,
+    "controller_version": get_controller_version(),
+    "index_url": get_index_url(),
 }
 
 doctest_test_doctest_blocks = ""
@@ -79,7 +98,6 @@ html_sidebars = {
         "sidebar/scroll-start.html",
         "sidebar/navigation.html",
         "sidebar/scroll-end.html",
-        "sidebar/versions.html",
     ]
 }
 html_theme_options = {
@@ -87,31 +105,8 @@ html_theme_options = {
     "top_of_page_button": "edit",
 }
 
-# -- sphinx-multiversion configuration -------------------------------------
-# This replaces the custom bash script approach with built-in functionality
-
-# Tags pattern for html_context["versions"]
-smv_tag_whitelist = r"^v(0\.[5-9](\.\d+)|0\.[1-9][0-9]+(\.\d+)|[1-9]\d*\.\d+\.\d+)$"  # Starting from v0.5.0
-smv_branch_whitelist = r"^(main|master)$"  # Only include main/master branch
-smv_remote_whitelist = None
-smv_released_pattern = r"^v[0-9]+\.[0-9]+\.[0-9]+$"  # Tags that are considered releases
-smv_outputdir_format = "{ref.name}"  # Directory name format
-
-# Ensure static files are copied to all versions
-smv_static_files = [
-    "_static/**",
-    "_templates/**",
-]
-
-# Ensure RST directives are processed
-smv_include_patterns = [
-    "*.md",
-    "*.rst",
-    "*.txt",
-]
-
-# Patterns for the versions panel
-html_context = {
-    "display_lower": True,  # Display lower versions at the bottom of the menu
-    "deploy_url": os.getenv("DEPLOY_URL", "https://docs.jumpstarter.dev"),  # Get Netlify URL from environment variable
-}
+# sphinx-copybutton config
+copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+copybutton_prompt_is_regexp = True
+copybutton_only_copy_prompt_lines = True
+copybutton_line_continuation_character = "\\"

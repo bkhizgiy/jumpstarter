@@ -5,8 +5,9 @@ that can be used to serve files.
 
 ## Installation
 
-```shell
-pip install jumpstarter-driver-tftp
+```{code-block} console
+:substitutions:
+$ pip3 install --extra-index-url {{index_url}} jumpstarter-driver-tftp
 ```
 
 ## Configuration

@@ -3,6 +3,16 @@
 This guide walks you through the process of creating an exporter using the
 controller service, configuring drivers, and running the exporter.
 
+```{warning}
+The jumpstarter-controller endpoints are secured by TLS. However, in release 0.6.x,
+the certificates are self-signed and rotated on every restart. This means the client
+will not be able to verify the server certificate. To bypass this, you should use the
+`--insecure-tls-config` flag when creating clients and exporters. This issue will be
+resolved in the next release. See [issue #455](https://github.com/jumpstarter-dev/jumpstarter/issues/455)
+for more details.
+Alternatively, you can configure the ingress/route in reencrypt mode with your own key and certificate.
+```
+
 ## Prerequisites
 
 Install [the following packages](../installation/packages.md) in your Python
@@ -29,15 +39,15 @@ provides commands to interact with the controller directly.
 Run this command to create an exporter named `example-distributed` and save the
 configuration locally:
 
-```shell
-$ jmp admin create exporter example-distributed --save
+```console
+$ jmp admin create exporter example-distributed --label foo=bar --save --insecure-tls-config
 ```
 
 After creating the exporter, find the new configuration file at
 `/etc/jumpstarter/exporters/example-distributed.yaml`. Edit the configuration
 using your default text editor with:
 
-```shell
+```console
 $ jmp config exporter edit example-distributed
 ```
 
@@ -63,7 +73,7 @@ export:
 
 Start the exporter locally using the `jmp` CLI tool:
 
-```shell
+```console
 $ jmp run --exporter example-distributed
 ```
 
@@ -77,8 +87,8 @@ The following command creates a client named "hello", enables unsafe drivers for
 development purposes, and saves the configuration locally in
 `${HOME}/.config/jumpstarter/clients/`:
 
-```shell
-$ jmp admin create client hello --save --unsafe
+```console
+$ jmp admin create client hello --save --unsafe --insecure-tls-config
 ```
 
 ### Spawn an Exporter Shell
@@ -88,7 +98,7 @@ in the `jmp` CLI. When you spawn a shell, the client attempts to acquire a lease
 on an exporter. Once the lease is acquired, you can interact with the exporter
 through your shell session.
 
-```shell
+```console
 $ jmp shell --client hello --selector example.com/board=foo
 ```
 
@@ -96,7 +106,7 @@ $ jmp shell --client hello --selector example.com/board=foo
 
 To terminate the local exporter, simply exit the shell:
 
-```shell
+```console
 $ exit
 ```
 

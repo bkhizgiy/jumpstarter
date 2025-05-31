@@ -4,8 +4,9 @@
 
 ## Installation
 
-```shell
-pip install jumpstarter-driver-http
+```{code-block} console
+:substitutions:
+$ pip3 install --extra-index-url {{index_url}} jumpstarter-driver-http
 ```
 
 ## Configuration

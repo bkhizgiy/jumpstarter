@@ -20,8 +20,9 @@ tools you need to run an exporter or interact with your hardware as a client.
 Install the Python package using `pip` or a similar tool. You need Python
 {{requires_python}}:
 
-```shell
-$ pip3 install --extra-index-url https://pkg.jumpstarter.dev/ jumpstarter-all
+```{code-block} console
+:substitutions:
+$ pip3 install --extra-index-url {{index_url}} jumpstarter-all
 $ mkdir -p "${HOME}/.config/jumpstarter/"
 $ sudo mkdir /etc/jumpstarter
 ```
@@ -29,11 +30,21 @@ $ sudo mkdir /etc/jumpstarter
 The command above installs packages globally. For library usage, we recommend
 installing in a virtual environment instead:
 
-```shell
+```{code-block} console
+:substitutions:
 $ python3 -m venv ~/.venv/jumpstarter
 $ source ~/.venv/jumpstarter/bin/activate
-$ pip3 install --extra-index-url https://pkg.jumpstarter.dev/ jumpstarter-all
+$ pip3 install --extra-index-url {{index_url}} jumpstarter-all
 ```
+
+Additional package indexes are available, this is a complete list of our
+indexes:
+
+| Index | Description |
+|-------|-------------|
+| [releases](https://pkg.jumpstarter.dev/) | Release, or release-candidate versions |
+| [main](https://pkg.jumpstarter.dev/main/) | Index tracking the main branch, equivalent to installing from sources |
+| [release-0.6](https://pkg.jumpstarter.dev/release-0.6) | Index tracking a stable branch |
 
 ### Installing from Source
 
@@ -41,7 +52,7 @@ Jumpstarter undergoes active development with frequent feature additions. We
 conduct thorough testing and recommend installing the latest version from the
 `main` branch.
 
-```shell
+```console
 $ sudo dnf install -y uv make git
 $ git clone https://github.com/jumpstarter-dev/jumpstarter.git
 $ cd jumpstarter
@@ -53,7 +64,7 @@ $ sudo mkdir /etc/jumpstarter
 
 Activate the virtual environment to use Jumpstarter CLI commands:
 
-```shell
+```console
 $ source .venv/bin/activate
 $ jmp version
 ```
@@ -65,7 +76,7 @@ instead. To interact with the service without local Python package installation,
 create an alias to run the `jmp` client in a container. We recommend adding this
 alias to your shell profile for persistent use:
 
-```{code-block} shell
+```{code-block} console
 :substitutions:
 $ alias jmp='podman run --rm -it -w /home \
     -v "$(pwd):/home":z \
@@ -78,7 +89,7 @@ When you need hardware access for running the `jmp` command or following the
 container with device access, host networking, and privileged mode. This
 typically requires `root` privileges:
 
-```{code-block} shell
+```{code-block} console
 :substitutions:
 $ mkdir -p "${HOME}/.config/jumpstarter/" /etc/jumpstarter
 $ alias jmp='podman run --rm -it \
@@ -90,6 +101,6 @@ $ alias jmp='podman run --rm -it \
 
 If you've configured a `jmp` alias you can undefine it with:
 
-```shell
+```console
 $ unalias jmp
 ```

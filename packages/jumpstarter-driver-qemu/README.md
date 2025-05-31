@@ -5,8 +5,9 @@ virtualization platform.
 
 ## Installation
 
-```shell
-pip install jumpstarter-driver-qemu
+```{code-block} console
+:substitutions:
+$ pip3 install --extra-index-url {{index_url}} jumpstarter-driver-qemu
 ```
 
 ## Configuration

@@ -9,11 +9,12 @@ requires-python = ">=3.11"
 dependencies = [
   "jumpstarter",
   "pydantic>=2.8.2",
-  "asyncclick>=8.1.7.2",
+  "click>=8.1.7.2",
   "authlib>=1.4.1",
   "truststore>=0.10.1",
   "joserfc>=1.0.3",
   "yarl>=1.18.3",
+  "rich>=14.0.0",
 ]
 
 [dependency-groups]
@@ -36,5 +37,8 @@ source = "vcs"
 raw-options = { 'root' = '../../' }
 
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling", "hatch-vcs", "hatch-pin-jumpstarter"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.hooks.pin_jumpstarter]
+name = "pin_jumpstarter"

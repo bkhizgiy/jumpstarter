@@ -6,26 +6,26 @@ distributed modes. Each example demonstrates how to accomplish common tasks.
 ## Starting and Exiting a Session
 
 Start a local exporter session:
-```shell
+```console
 $ jmp shell --exporter example-local
 ```
 
 Start a distributed exporter session:
-```shell
+```console
 $ jmp shell --client hello --selector example.com/board=foo
 ```
 
 When finished, simply exit the shell:
-```shell
+```console
 $ exit
 ```
 
-### Interact with the Exporter Shell
+## Interact with the Exporter Shell
 
 The exporter shell provides access to driver CLI interfaces through the magic
 `j` command:
 
-```shell
+```console
 $ jmp shell # Use appropriate --exporter or --client parameters
 $ j
 Usage: j [OPTIONS] COMMAND [ARGS]...
@@ -56,14 +56,14 @@ Each driver can expose different commands through this interface, making it easy
 to interact with the mock hardware. The command structure follows `j
 <driver_type> <action>`, where available actions depend on the specific driver.
 
-### Use the Python API in a Shell
+## Use the Python API in a Shell
 
 The exporter shell exposes the local exporter via environment variables,
 enabling you to run any Python code that interacts with the client/exporter.
 This approach works especially well for complex operations or when a driver
 doesn't provide a CLI.
 
-#### Using Python with Jumpstarter
+### Using Python with Jumpstarter
 
 Create a Python file for interacting with your exporter. This example
 (`example.py`) demonstrates a complete power cycle workflow:
@@ -77,7 +77,7 @@ with env() as client:
    client.power.off()
 ```
 
-```shell
+```console
 $ jmp shell # Use appropriate --exporter or --client parameters
 $ python ./example.py
 $ exit
@@ -105,7 +105,7 @@ Using a Python with Jumpstarter allows you to:
    - Import other Python libraries (like `time` in this example)
    - Build sophisticated automation scripts
 
-#### Running `pytest` in the Shell
+### Running `pytest` in the Shell
 
 For multiple test cases, run a `pytest` suite using Jumpstarter's built-in
 testing library as defined in `example_test.py`:
@@ -121,7 +121,7 @@ class MyTest(JumpstarterTest):
       client.power.off()
 ```
 
-```shell
+```console
 $ jmp shell # Use appropriate --exporter or --client parameters
 $ pytest ./example_test.py
 $ exit

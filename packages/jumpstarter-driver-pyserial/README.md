@@ -5,8 +5,9 @@ communication.
 
 ## Installation
 
-```shell
-pip install jumpstarter-driver-pyserial
+```{code-block} console
+:substitutions:
+$ pip3 install --extra-index-url {{index_url}} jumpstarter-driver-pyserial
 ```
 
 ## Configuration

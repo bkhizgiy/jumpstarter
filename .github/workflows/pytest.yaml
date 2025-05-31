@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - release-*
   pull_request:
   merge_group:
 
@@ -12,24 +13,22 @@ permissions:
   pull-requests: read
 jobs:
   pytest-matrix:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runs-on }}
     strategy:
       matrix:
+        runs-on: [ubuntu-24.04, macos-15]
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@6b9c6063abd6010835644d4c2e1bef4cf5cd0fca # v6.0.1
         with:
-          version: "latest"
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          version: latest
+          python-version: ${{ matrix.python-version }}
 
-      - name: Install Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
-
-      - name: Install Qemu
+      - name: Install Qemu (Linux)
+        if: runner.os == 'Linux'
         run: |
           echo <<EOF | sudo tee /etc/udev/rules.d/99-kvm.rules
           KERNEL=="kvm", GROUP="kvm", MODE="0666"
@@ -45,6 +44,11 @@ jobs:
 
           sudo apt-get update
           sudo apt-get install -y qemu-system-arm qemu-system-x86
+
+      - name: Install Qemu (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install qemu
 
       - name: Cache Fedora Cloud images
         id: cache-fedora-cloud-images
@@ -63,7 +67,6 @@ jobs:
 
       - name: Run pytest
         run: |
-            export UV_PYTHON=${{ matrix.python-version }}
             make test
 
 

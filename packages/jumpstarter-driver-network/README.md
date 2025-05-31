@@ -5,8 +5,9 @@ servers and connections.
 
 ## Installation
 
-```shell
-pip install jumpstarter-driver-network
+```{code-block} console
+:substitutions:
+$ pip3 install --extra-index-url {{index_url}} jumpstarter-driver-network
 ```
 
 ## Configuration

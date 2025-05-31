@@ -6,8 +6,9 @@ video device and exposes both snapshot and streaming interfaces.
 
 ## Installation
 
-```shell
-pip install jumpstarter-driver-ustreamer
+```{code-block} console
+:substitutions:
+$ pip3 install --extra-index-url {{index_url}} jumpstarter-driver-ustreamer
 ```
 
 ## Configuration
