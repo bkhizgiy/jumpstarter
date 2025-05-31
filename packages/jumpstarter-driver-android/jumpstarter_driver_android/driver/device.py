@@ -1,5 +1,4 @@
 from dataclasses import field
-from typing import override
 
 from pydantic.dataclasses import dataclass
 
@@ -17,7 +16,6 @@ class AndroidDevice(Driver):
     """
 
     @classmethod
-    @override
     def client(cls) -> str:
         return "jumpstarter_driver_android.client.AndroidClient"
 

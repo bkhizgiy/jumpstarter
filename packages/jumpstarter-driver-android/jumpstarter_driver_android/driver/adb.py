@@ -2,7 +2,6 @@ import os
 import shutil
 import subprocess
 from dataclasses import dataclass
-from typing import override
 
 from jumpstarter_driver_network.driver import TcpNetwork
 
@@ -17,7 +16,6 @@ class AdbServer(TcpNetwork):
     port: int = 5037
 
     @classmethod
-    @override
     def client(cls) -> str:
         return "jumpstarter_driver_android.client.AdbClient"
 
