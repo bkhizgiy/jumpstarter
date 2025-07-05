@@ -61,34 +61,6 @@ def test_import_class():
 
 ```
 
-### Jumpstarter Drivers
-
-Driver packages start with `jumpstarter-driver-*`.
-
-To test drivers we can use several utility functions from the `jumpstarter.common.utils` module.
-
-To test creating a driver and instantiating the correct client class, we can use the `serve` function.
-
-Here is an example using `serve` to test a driver class:
-
-```python
-from jumpstarter.common.utils import serve
-
-from .driver import ExampleDriver
-
-def test_driver_example():
-    instance = ExampleDriver(my_argument=True)
-
-    with serve(instance) as client:
-        assert client.example() == 1
-```
-
-To test a driver client CLI, we can use Click's built-in testing capabilities with `CliRunner`.
-
-```python
-
-```
-
 ### Jumpstarter CLI
 
 CLI packages start with `jumpstarter-cli-*`.

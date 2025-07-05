@@ -102,11 +102,3 @@ Here are some useful `make` commands:
 - `make clean` - Cleans docs, venv, build, and tests.
 
 To run the Jumpstarter CLI tool with `uv`, use `uv run jmp`.
-
-## Creating Driver Packages
-
-To create a new driver package, run the following command to generate a new driver package:
-
-```bash
-./__templates__/create_driver.sh driver_package DriverClass "Your Name" "your.email@example.com"
-```
