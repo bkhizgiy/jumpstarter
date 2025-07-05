@@ -32,6 +32,10 @@ help:
 	@echo "  lint               - Run ruff linter"
 	@echo "  lint-fix           - Run ruff linter with auto-fix"
 	@echo ""
+	@echo "Development targets:"
+	@echo "  create-driver      - Create a new driver package (prompts for inputs if not provided)"
+	@echo "                       Usage: make create-driver [DRIVER_NAME=my_driver] [DRIVER_CLASS=MyDriver] [AUTHOR_NAME=\"Your Name\"] [AUTHOR_EMAIL=your@email.com]"
+	@echo ""
 	@echo "Cleaning targets:"
 	@echo "  clean              - Run all clean targets"
 	@echo "  clean-venv         - Clean virtual environment"
@@ -81,6 +85,56 @@ generate:
 sync:
 	uv sync --all-packages --all-extras
 
+create-driver:
+	@driver_name="$(DRIVER_NAME)"; \
+	driver_class="$(DRIVER_CLASS)"; \
+	author_name="$(AUTHOR_NAME)"; \
+	author_email="$(AUTHOR_EMAIL)"; \
+	\
+	if [ -z "$$driver_name" ]; then \
+		echo "Driver name (use underscores, e.g., my_usb_device):"; \
+		read driver_name; \
+		if [ -z "$$driver_name" ]; then \
+			echo "Error: Driver name is required"; \
+			exit 1; \
+		fi; \
+	fi; \
+	\
+	if [ -z "$$driver_class" ]; then \
+		echo "Driver class name (PascalCase, e.g., MyUsbDevice):"; \
+		read driver_class; \
+		if [ -z "$$driver_class" ]; then \
+			echo "Error: Driver class name is required"; \
+			exit 1; \
+		fi; \
+	fi; \
+	\
+	if [ -z "$$author_name" ]; then \
+		echo "Author name:"; \
+		read author_name; \
+		if [ -z "$$author_name" ]; then \
+			echo "Error: Author name is required"; \
+			exit 1; \
+		fi; \
+	fi; \
+	\
+	if [ -z "$$author_email" ]; then \
+		echo "Author email:"; \
+		read author_email; \
+		if [ -z "$$author_email" ]; then \
+			echo "Error: Author email is required"; \
+			exit 1; \
+		fi; \
+	fi; \
+	\
+	echo "Creating driver: $$driver_name"; \
+	./__templates__/create_driver.sh "$$driver_name" "$$driver_class" "$$author_name" "$$author_email"; \
+	echo "Driver '$$driver_name' created successfully!"; \
+	echo "Next steps:"; \
+	echo "  1. Edit the driver implementation in packages/jumpstarter-driver-$$(echo $$driver_name | sed 's/_/-/g')/jumpstarter_driver_$$driver_name/driver.py"; \
+	echo "  2. Update the README.md with driver-specific documentation"; \
+	echo "  3. Run tests: make pkg-test-jumpstarter-driver-$$(echo $$driver_name | sed 's/_/-/g')"
+
 clean-venv:
 	-rm -rf ./.venv
 	-find . -type d -name __pycache__ -exec rm -r {} \+
@@ -109,7 +163,7 @@ lint-fix:
 	uv run ruff check --fix
 
 .PHONY: default help docs docs-all docs-serve docs-serve-all docs-clean docs-test \
-	docs-linkcheck pkg-test-all pkg-ty-all build generate sync \
+	docs-linkcheck pkg-test-all pkg-ty-all build generate sync create-driver \
 	clean-venv clean-build clean-test clean-all test-all ty-all docs \
 	lint lint-fix \
 	pkg-ty-jumpstarter \
