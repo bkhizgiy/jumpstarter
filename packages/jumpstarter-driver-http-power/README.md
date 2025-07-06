@@ -35,7 +35,7 @@ export:
           password: "secret"
 ```
 
-### Example configuration for Shelly Smart Plug:
+### Example configuration for Shelly Smart Plug
 
 ```yaml
 apiVersion: jumpstarter.dev/v1alpha1
@@ -97,6 +97,7 @@ export:
 ### Examples
 
 Basic power control:
+
 ```python
 # Power on the device
 http_power_client.on()
@@ -104,7 +105,6 @@ http_power_client.on()
 # Power off the device
 http_power_client.off()
 ```
-
 
 ## Notes
 

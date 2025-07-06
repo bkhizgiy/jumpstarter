@@ -11,7 +11,7 @@ from jumpstarter.driver import Driver, export
 @dataclass(kw_only=True)
 class HttpEndpointConfig:
     url: str = field()
-    method: str = field(default='GET')
+    method: str = field(default="GET")
     data: Optional[str] = field(default=None)
 
 
@@ -32,6 +32,7 @@ class HttpPower(PowerInterface, Driver):
 
     Makes HTTP requests to control power and read power measurements.
     """
+
     name: str = field(default="device")
     # HTTP endpoints configuration
     power_on: HttpEndpointConfig = field()
@@ -56,7 +57,6 @@ class HttpPower(PowerInterface, Driver):
         if self.auth and self.auth.basic and isinstance(self.auth.basic, dict):
             self.auth.basic = HttpBasicAuth(**self.auth.basic)
 
-
     def _make_http_request(self, endpoint_config: HttpEndpointConfig) -> str:
         """Make HTTP request to the specified endpoint"""
         auth = None
@@ -64,11 +64,11 @@ class HttpPower(PowerInterface, Driver):
             auth = (self.auth.basic.user, self.auth.basic.password)
         method = endpoint_config.method.upper()
         kwargs = {
-            'url': endpoint_config.url,
-            'auth': auth,
+            "url": endpoint_config.url,
+            "auth": auth,
         }
-        if endpoint_config.data and method in ['POST', 'PUT', 'PATCH']:
-            kwargs['data'] = endpoint_config.data
+        if endpoint_config.data and method in ["POST", "PUT", "PATCH"]:
+            kwargs["data"] = endpoint_config.data
 
         self.logger.debug(f"Making {method} request to {endpoint_config.url}")
 

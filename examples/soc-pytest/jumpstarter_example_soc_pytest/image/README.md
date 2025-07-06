@@ -3,13 +3,12 @@
 This directory contains scripts to prepare the image for the example SOC test,
 running `make` should:
 
-* Download a minimal raspbian image
-* Inject the settings for the test to be performed (enable UART, setup basic password, tpm dtb)
+- Download a minimal raspbian image
+- Inject the settings for the test to be performed (enable UART, setup basic password, tpm dtb)
 
 You will need guestmount installed, sudo permissions.
 
 fuse must be configured to enable `user_allow_other` in `/etc/fuse.conf`.
-
 
 ```shell
 $ make

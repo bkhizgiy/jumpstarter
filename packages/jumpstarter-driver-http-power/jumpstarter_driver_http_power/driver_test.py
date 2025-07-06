@@ -23,34 +23,30 @@ class MockHTTPHandler(BaseHTTPRequestHandler):
 
     def _handle_request(self):
         # Record the request for verification
-        if not hasattr(self.server, 'requests'):
+        if not hasattr(self.server, "requests"):
             self.server.requests = []
 
-        content_length = int(self.headers.get('Content-Length', 0))
-        body = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else None
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else None
 
-        self.server.requests.append({
-            'method': self.command,
-            'path': self.path,
-            'body': body
-        })
+        self.server.requests.append({"method": self.command, "path": self.path, "body": body})
 
         # Send appropriate response based on endpoint
-        if self.path == '/read':
+        if self.path == "/read":
             self.send_response(200)
-            self.send_header('Content-type', 'application/json')
+            self.send_header("Content-type", "application/json")
             self.end_headers()
             self.wfile.write(b'{"voltage": 12.0, "current": 2.5}')
         else:
             self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
+            self.send_header("Content-type", "text/plain")
             self.end_headers()
-            self.wfile.write(b'OK')
+            self.wfile.write(b"OK")
 
 
 def test_drivers_http_power():
     # Start a mock HTTP server
-    server = HTTPServer(('localhost', 0), MockHTTPHandler)
+    server = HTTPServer(("localhost", 0), MockHTTPHandler)
     server_port = server.server_address[1]
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
@@ -67,9 +63,9 @@ def test_drivers_http_power():
 
         with serve(instance) as client:
             # Test that the client can be created and basic methods exist
-            assert hasattr(client, 'on')
-            assert hasattr(client, 'off')
-            assert hasattr(client, 'read')
+            assert hasattr(client, "on")
+            assert hasattr(client, "off")
+            assert hasattr(client, "read")
 
             # Test actual HTTP calls
             client.on()
@@ -86,21 +82,21 @@ def test_drivers_http_power():
 
             # Check on request
             on_request = server.requests[0]
-            assert on_request['method'] == 'POST'
-            assert on_request['path'] == '/on'
-            assert on_request['body'] == 'power=on'
+            assert on_request["method"] == "POST"
+            assert on_request["path"] == "/on"
+            assert on_request["body"] == "power=on"
 
             # Check off request
             off_request = server.requests[1]
-            assert off_request['method'] == 'POST'
-            assert off_request['path'] == '/off'
-            assert off_request['body'] == 'power=off'
+            assert off_request["method"] == "POST"
+            assert off_request["path"] == "/off"
+            assert off_request["body"] == "power=off"
 
             # Check read request
             read_request = server.requests[2]
-            assert read_request['method'] == 'GET'
-            assert read_request['path'] == '/read'
-            assert read_request['body'] is None
+            assert read_request["method"] == "GET"
+            assert read_request["path"] == "/read"
+            assert read_request["body"] is None
 
     finally:
         server.shutdown()

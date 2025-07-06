@@ -33,7 +33,7 @@ def uboot_image(tmpdir_factory):
 
 @pytest.mark.xfail(
     platform.system() == "Darwin" and os.getenv("GITHUB_ACTIONS") == "true",
-    reason="QEMU-based U-Boot tests are flaky on macOS in GitHub CI"
+    reason="QEMU-based U-Boot tests are flaky on macOS in GitHub CI",
 )
 def test_driver_uboot_console(uboot_image):
     print(uboot_image)

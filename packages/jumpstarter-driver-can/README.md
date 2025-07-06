@@ -43,7 +43,7 @@ export:
 ```
 
 ## `jumpstarter_driver_can.IsoTpPython`
- 
+
 A Pure python ISO-TP socket driver
 
 Available on any platform (does not require Linux ISO-TP kernel module), moderate
@@ -79,6 +79,7 @@ export:
 | read_timeout  | Read timeout for the bus in seconds | `float` | no | 0.05 |
 
 ### API Reference
+
 ```{eval-rst}
 .. autoclass:: jumpstarter_driver_can.client.IsoTpClient()
     :members:
@@ -117,6 +118,7 @@ export:
 | params        | IsoTp parameters, refer to the [IsoTpParams](#isotpparams) section table | `IsoTpParams` | no | see table |
 
 ### API Reference
+
 ```{eval-rst}
 .. autoclass:: jumpstarter_driver_can.client.IsoTpClient()
     :noindex:
@@ -124,6 +126,7 @@ export:
 ```
 
 ## IsoTpParams
+
 | Parameter                   | Description                                                                                           | Type             | Required | Default    |
 |-----------------------------|-------------------------------------------------------------------------------------------------------|------------------|----------|------------|
 | `stmin`                     | Minimum Separation Time minimum in milliseconds between consecutive frames.                           | `int`            | No       | `0`        |

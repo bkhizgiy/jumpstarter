@@ -57,17 +57,20 @@ export:
 ### Examples
 
 Power cycling a device:
+
 ```python
 snmp_client.cycle(wait=3)
 ```
 
 Basic power control:
+
 ```python
 snmp_client.off()
 snmp_client.on()
 ```
 
 Using the CLI:
+
 ```shell
 j power on
 j power off

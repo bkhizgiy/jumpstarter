@@ -39,12 +39,12 @@ def get_native_arch_config():
     elif native_arch == "aarch64":
         return "aarch64", "aarch64"
     else:
-        pytest.skip(f"Unsupported architecture: {native_arch}") # ty: ignore[call-non-callable]
+        pytest.skip(f"Unsupported architecture: {native_arch}")  # ty: ignore[call-non-callable]
 
 
 @pytest.mark.xfail(
     platform.system() == "Darwin" and os.getenv("GITHUB_ACTIONS") == "true",
-    reason="QEMU tests are flaky on macOS in GitHub CI"
+    reason="QEMU tests are flaky on macOS in GitHub CI",
 )
 def test_driver_qemu(tmp_path, ovmf):
     arch, ovmf_arch = get_native_arch_config()

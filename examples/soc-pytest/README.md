@@ -4,10 +4,12 @@ This example aims to demonstrate Jumpstarter in an a simple SOC testing scenario
 using pytest.
 
 The following drivers will be utilized:
+
 - DUTLink: for power, storage and console control of the target
 - UStreamer: with an hdmi capture card plus a webcam for video snapshits
 
 This example requires the following hardware:
+
 - 1x Raspberry Pi 4
 - 1x dutlink  (DUTLink could be replaced by a composite set of power, storage
   mux and serial port interface)
@@ -22,6 +24,7 @@ This example requires the following hardware:
 3) Label the exporter in k8s with the `board=rpi4` label
 4) Prepare the images by running `make` in the `image` directory
 5) Run the tests in this directory by running:
+
 ```shell
 $ cd jumpstarter_example_soc_pytest
 $ uv run pytest -s

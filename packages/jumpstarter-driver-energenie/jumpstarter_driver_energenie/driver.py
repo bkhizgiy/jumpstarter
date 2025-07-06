@@ -1,4 +1,3 @@
-
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 
@@ -31,8 +30,11 @@ class EnerGenie(PowerInterface, Driver):
         try:
             response = requests.post(login_url, data={"pw": self.password}, timeout=10)
             return response.status_code == 200
-        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout,
-                requests.exceptions.RequestException) as e:
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.RequestException,
+        ) as e:
             self.logger.error(f"Login failed: {str(e)}")
             return False
 
@@ -46,7 +48,6 @@ class EnerGenie(PowerInterface, Driver):
             raise ValueError("Host must be specified")
         self.logger.debug(f"Using Host: {self.host}, Slot: {self.slot}")
         self.base_url = f"http://{self.host}"
-
 
     def set_switch(self, switch_number, state):
         """
@@ -71,8 +72,11 @@ class EnerGenie(PowerInterface, Driver):
             if response.status_code != 200:
                 self.logger.error(f"Set switch {switch_number} to {state} state failed!")
                 return False
-        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout,
-                requests.exceptions.RequestException) as e:
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.RequestException,
+        ) as e:
             self.logger.error(f"Set switch failed: {str(e)}")
             return False
 

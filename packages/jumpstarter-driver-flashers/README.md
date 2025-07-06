@@ -22,8 +22,8 @@ $ pip3 install --extra-index-url {{index_url}} jumpstarter-driver-flashers
 | --------------- | ------------------------------------------------------------ |
 | TIJ784S4Flasher | quay.io/jumpstarter-dev/jumpstarter-flasher-ti-j784s4:latest |
 
-
 ## Driver configuration
+
 **driver**: `jumpstarter_driver_flashers.driver.${DRIVER}`
 
 ```yaml
@@ -75,6 +75,7 @@ HTTP servers are used to serve images to the DUT bootloader and busybox shell.
 ## BaseFlasher API
 
 The `BaseFlasher` class provides a set of methods to flash the DUT,
+
 ```{eval-rst}
 .. autoclass:: jumpstarter_driver_flashers.client.BaseFlasherClient()
     :members: flash, busybox_shell, bootloader_shell, use_dtb, use_initram, use_kernel
@@ -93,6 +94,7 @@ This doesn't work with sphinx-click, so we'll just use the raw CLI
     :nested: full
 ```
 -->
+
 ```shell
 $ jmp shell -l board=ti-03
 INFO:jumpstarter.client.lease:Created lease request for labels {'board': 'ti-03'} for 0:30:00
@@ -112,6 +114,7 @@ Commands:
 ```
 
 ### flash
+
 ```shell
 Usage: j storage flash [OPTIONS] FILE
 
@@ -128,6 +131,7 @@ Options:
 ```
 
 Example:
+
 ```
 jumpstarter ⚡remote ➤ j storage flash https://autosd.sig.centos.org/AutoSD-9/nightly/TI/auto-osbuild-am69sk-autosd9-qa-regular-aarch64-1716106242.66b4d866.raw.xz
 BaseFlasherClient - INFO - Writing image to storage in the background: /AutoSD-9/nightly/TI/auto-osbuild-am69sk-autosd9-qa-regular-aarch64-1716106242.66b4d866.raw.xz
@@ -161,6 +165,7 @@ BaseFlasherClient - INFO - Powering off target
 ```
 
 ### bootloader-shell
+
 ```shell
 Usage: j storage bootloader-shell [OPTIONS]
 
@@ -172,6 +177,7 @@ Options:
 ```
 
 Example
+
 ```
 jumpstarter ⚡remote ➤ j storage bootloader-shell
 BaseFlasherClient - INFO - Setting up flasher bundle files in exporter
@@ -185,7 +191,9 @@ U-Boot 2024.01-rc3 (Jan 09 2024 - 00:00:00 +0000)
 gcc (GCC) 11.4.1 20231218 (Red Hat 11.4.1-3)
 GNU ld version 2.35.2-42.el9
 ```
+
 ### busybox-shell
+
 ```shell
 Usage: j storage busybox-shell [OPTIONS]
 
@@ -197,6 +205,7 @@ Options:
 ```
 
 Example
+
 ```
 jumpstarter ⚡remote ➤ j storage busybox-shell
 BaseFlasherClient - INFO - Setting up flasher bundle files in exporter
@@ -220,20 +229,22 @@ Linux buildroot 6.1.46-dirty #2 SMP PREEMPT Thu Mar 14 14:37:01 UTC 2024 aarch64
 ## Examples
 
 Flash the device with a specific image
+
 ```python
 flasherclient.flash("/path/to/image.raw.xz")
 ```
 
 Flash the device with a specific image from a remote URL
+
 ```python
 flasherclient.flash("https://autosd.sig.centos.org/AutoSD-9/nightly/TI/auto-osbuild-j784s4evm-autosd9-qa-regular-aarch64-1716106242.66b4d866.raw.xz")
 ```
 
 Flash into a specific partition
+
 ```python
 flasherclient.flash("/path/to/image.raw.xz", partition="emmc")
 ```
-
 
 ## Examples of utility consoles
 
@@ -243,6 +254,7 @@ when using the `busybox_shell` and `bootloader_shell` methods the embedded http
 and tftp servers will be online and serving the images from the flasher bundle.
 
 Get the busybox shell on the device
+
 ```python
 with flasherclient.busybox_shell() as serial:
     serial.send("ls -la\n")
@@ -251,6 +263,7 @@ with flasherclient.busybox_shell() as serial:
 ```
 
 Get the bootloader shell on the device
+
 ```python
 with flasherclient.bootloader_shell() as serial:
     serial.send("version\n")
@@ -266,16 +279,17 @@ bundles to package the artifacts and metadata.
 
 The bundle is a container that uses [oras](https://oras.land/) to transport the
 artifacts and metadata. It is a container that contains the following:
+
 - `manifest.yaml`: The manifest file that describes the bundle
 - `data/*`: The artifacts, including kernel, initram, dtbs, etc.
 
-## The format of the manifest is as follows:
+## The format of the manifest is as follows
 
 ```{literalinclude} ../../../../../packages/jumpstarter-driver-flashers/oci_bundles/test/manifest.yaml
 :language: yaml
 ```
 
-## Table with the spec fields of the manifest:
+## Table with the spec fields of the manifest
 
 | Field                | Description                                                                | Default |
 | -------------------- | -------------------------------------------------------------------------- | ------- |

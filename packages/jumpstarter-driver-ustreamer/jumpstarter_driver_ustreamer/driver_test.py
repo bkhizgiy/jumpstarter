@@ -9,7 +9,7 @@ def test_drivers_video_ustreamer():
     try:
         instance = UStreamer()
     except FileNotFoundError:
-        pytest.skip("ustreamer not available") # ty: ignore[call-non-callable]
+        pytest.skip("ustreamer not available")  # ty: ignore[call-non-callable]
 
     with serve(instance) as client:
         assert client.state().ok

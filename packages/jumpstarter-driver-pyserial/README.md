@@ -41,6 +41,7 @@ export:
 ### Examples
 
 Using expect with a context manager
+
 ```{testcode}
 with pyserialclient.pexpect() as session:
     session.sendline("Hello, world!")
@@ -48,6 +49,7 @@ with pyserialclient.pexpect() as session:
 ```
 
 Using expect without a context manager
+
 ```{testcode}
 session = pyserialclient.open()
 session.sendline("Hello, world!")
@@ -56,6 +58,7 @@ pyserialclient.close()
 ```
 
 Using a simple BlockingStream with a context manager
+
 ```{testcode}
 with pyserialclient.stream() as stream:
     stream.send(b"Hello, world!")
@@ -63,6 +66,7 @@ with pyserialclient.stream() as stream:
 ```
 
 Using a simple BlockingStream without a context manager
+
 ```{testcode}
 stream = pyserialclient.open_stream()
 stream.send(b"Hello, world!")
