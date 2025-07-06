@@ -1,0 +1,20 @@
+apiVersion: jumpstarter.dev/v1alpha1
+kind: ExporterConfig
+metadata:
+  name: ssh-example
+  namespace: jumpstarter-lab
+endpoint: ""
+token: ""
+export:
+  ssh:
+    type: jumpstarter_driver_ssh.driver.SshNetwork
+    config:
+      host: "192.168.1.100" # SSH server hostname or IP
+      port: 22 # SSH port (default: 22)
+      username: "admin" # SSH username
+      password: "secure123" # SSH password (or use private_key_path)
+      # private_key_path: "/path/to/private/key"  # Alternative to password
+      # private_key_passphrase: "key_passphrase"  # If private key is encrypted
+      host_key_checking: false # Disable host key checking (default: true)
+      connect_timeout: 30 # Connection timeout in seconds
+      keepalive_interval: 30 # SSH keepalive interval
