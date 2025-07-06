@@ -1,38 +1,44 @@
-# Jumpstarter AI Context Documentation
+# Jumpstarter Monorepo - Root Context
 
-This file provides AI assistants with comprehensive context about the Jumpstarter project structure, architecture, and development patterns.
+## Context Loading Strategy
 
-## Project Structure and Package Management
+This file provides base context. More specific context is loaded based on working directory:
+
+- **Root directory**: General monorepo patterns
+- **Package directory**: Package-specific patterns + general
+- **Driver package**: Driver patterns + package patterns + general
+
+## Base Imports (Always Available)
 
 @.ai-context/uv-monorepo-structure.md
-
-## Architecture Overview
-
 @.ai-context/architecture-overview.md
-
-## Communication Protocol
-
-@.ai-context/grpc-protocol.md
-
-## Command Line Interface
-
-@.ai-context/cli-tools.md
-
-## Development Workflow
-
 @.ai-context/development-workflow.md
-
-## Testing Patterns
-
 @.ai-context/testing-patterns.md
-
-## Driver Development
-
 @.ai-context/driver-development.md
-
-## Documentation System
-
+@.ai-context/driver-categories.md
+@.ai-context/grpc-protocol.md
+@.ai-context/cli-tools.md
 @.ai-context/documentation-authoring.md
+
+## Working Directory Detection
+
+Claude Code automatically discovers nested CLAUDE.md files when you read files in subdirectories.
+
+## Navigation Hints
+
+- `cd packages/jumpstarter/` - Core development context
+- `cd packages/jumpstarter-driver-*/` - Driver development context  
+- `cd packages/jumpstarter-cli*/` - CLI development context
+- `cd packages/jumpstarter-testing/` - Testing framework context
+- `cd packages/jumpstarter-protocol/` - Protocol definitions context
+- `cd examples/` - Usage examples and patterns
+
+## Monorepo Guidelines
+
+- Each package is independently developed but shares common patterns
+- Use `make pkg-test-<package>` for package-specific testing
+- Dependencies are managed at workspace level via uv
+- Cross-package changes require testing multiple packages
 
 ## Quick Reference
 
