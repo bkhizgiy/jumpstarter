@@ -131,7 +131,7 @@ class DebugClient(DriverClient):
 class VirtualizationClient(DriverClient):
     def start_vm(self, config: dict) -> str:
         return self.call("start_vm", config)
-    
+
     def stop_vm(self, vm_id: str) -> None:
         self.call("stop_vm", vm_id)
 ```
@@ -269,7 +269,7 @@ class TestHarnessClient(CompositeClient):
 
 ## Configuration Patterns by Category
 
-### Power Control
+### Power Control Config
 
 ```yaml
 power:
@@ -280,7 +280,7 @@ power:
     timeout: 10
 ```
 
-### Communication
+### Communication Config
 
 ```yaml
 serial:
@@ -291,7 +291,7 @@ serial:
     timeout: 5
 ```
 
-### Storage
+### Storage Config
 
 ```yaml
 storage:
@@ -302,7 +302,7 @@ storage:
     timeout: 30
 ```
 
-### Composite
+### Composite Config
 
 ```yaml
 test_harness:

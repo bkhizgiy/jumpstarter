@@ -132,7 +132,7 @@ MyDevice = "jumpstarter_driver_mydevice.driver:MyDevice"
 Register Jumpstarter adapters with the plugin system:
 
 ```toml
-[project.entry-points."jumpstarter.adapoters"]
+[project.entry-points."jumpstarter.adapters"]
 MyDevice = "jumpstarter_driver_mydevice.adapter:MyAdapter"
 ```
 
@@ -146,6 +146,8 @@ Drivers are Python dataclasses that can take configuration as keywords through t
 from dataclasses import field
 from pydantic import BaseModel, Field
 from pydantic.dataclasses import dataclass
+
+from jumpstarter.driver import Driver
 
 
 # Config files use the `BaseModel` and `Field` from Pydantic for validation
@@ -170,11 +172,56 @@ class MyDevice(Driver):
         self.something_else = self.config.name
 ```
 
+#### Configuration Schema Patterns
+
+**When to use `BaseModel` (Standalone Configuration Classes)**:
+
+- For complex configuration schemas that need validation
+- When configuration will be shared across multiple components  
+- For nested configuration structures
+- When you need advanced Pydantic features (validators, field aliases, etc.)
+
+**When to use `@dataclass` with `field()` (Driver Classes)**:
+
+- For the main driver class definition
+- When you need simple field defaults and type hints
+- For classes that inherit from `Driver` base class
+- When configuration is simple and doesn't require complex validation
+
+```python
+from typing import Optional
+from dataclasses import field
+from pydantic import BaseModel, Field, validator
+from pydantic.dataclasses import dataclass
+from jumpstarter.driver import Driver
+
+# Use BaseModel for complex configurations
+class DatabaseConfig(BaseModel):
+    host: str = Field(..., description="Database host")
+    port: int = Field(5432, ge=1, le=65535, description="Database port")
+    credentials: Optional[str] = Field(None, description="Credentials file path")
+
+    @validator('host')
+    def validate_host(cls, v):
+        if not v.strip():
+            raise ValueError('Host cannot be empty')
+        return v
+
+# Use dataclass for driver implementation
+@dataclass(kw_only=True)
+class DatabaseDriver(Driver):
+    config: DatabaseConfig = field(default_factory=DatabaseConfig)
+    timeout: int = field(default=30)  # Simple fields can go directly on driver
+```
+
 ### Async/Await Support
 
 All exported driver methods should be async (if possible) for a consistent API:
 
 ```python
+import aiohttp
+from jumpstarter.driver.decorators import export
+
 @export
 async def read_sensor(self) -> float:
     """Read sensor value asynchronously."""
@@ -184,11 +231,36 @@ async def read_sensor(self) -> float:
             return data["value"]
 ```
 
-All driver client methods should be sync (if possible) for compatibility with scripts.
+#### Driver vs Client Method Patterns
+
+**Driver Methods** (server-side):
+
+- Should be **async** whenever possible for non-blocking I/O
+- Handle hardware communication, network requests, file operations
+- Use `@export` decorator to expose via gRPC
+
+**Client Methods** (client-side):
+
+- Should be **sync** for user convenience and script compatibility  
+- Act as simple proxies to driver methods via `self.call()`
+- Allow users to call methods without dealing with async/await
+- Exception: streaming methods may return generators
+
+```python
+# Driver: async for I/O operations
+@export
+async def power_on(self) -> None:
+    async with aiohttp.ClientSession() as session:
+        await session.get(self.power_url)
+
+# Client: sync for user convenience  
+def power_on(self) -> None:
+    self.call("power_on")
+```
 
 ### Driver CLI
 
-Drivers can expose custom CLI methods through the `j` command using the `cli()` method.
+Drivers can expose custom CLI methods through the `j` command (available within `jmp shell` sessions) using the `cli()` method.
 
 Example driver CLI:
 
@@ -225,6 +297,7 @@ Use appropriate exceptions for different error conditions:
 ```python
 from jumpstarter.common.exceptions import DriverError, ConfigurationError
 from jumpstarter.driver import Driver
+from jumpstarter.driver.decorators import export
 
 
 class MyDevice(Driver):
@@ -416,7 +489,7 @@ import pytest
 from jumpstarter_driver_mydevice import MyDevice
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_power_cycle():
     config = {"host": "test.example.com"}
     driver = MyDevice(config)

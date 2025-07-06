@@ -18,7 +18,7 @@ jumpstarter/
 │   ├── jumpstarter/               # Core framework
 │   ├── jumpstarter-cli*/          # CLI tools
 │   ├── jumpstarter-driver-*/      # Hardware drivers
-│   ├── jumpstarter-kubernetes/    # K8s integration
+│   ├── jumpstarter-kubernetes/    # Kubernetes integration
 │   └── jumpstarter-protocol/      # gRPC definitions
 ├── Makefile                       # Build automation
 ├── pyproject.toml                 # Workspace configuration
@@ -29,28 +29,28 @@ jumpstarter/
 
 #### Core Framework
 
-- **jumpstarter**: Core framework and base classes
-- **jumpstarter-protocol**: gRPC protocol definitions
-- **jumpstarter-testing**: Testing utilities and fixtures
+- **`jumpstarter`**: Core framework and base classes
+- **`jumpstarter-protocol`**: Python gRPC protocol definitions generated from the [Jumpstarter Protocol](https://github.com/jumpstarter-dev/jumpstarter-protocol) repository
+- **`jumpstarter-testing`**: Testing integration for writing tests that use Jumpstarter in pytest
 
-#### CLI Tools
+#### CLI Packages
 
-- **jumpstarter-cli**: Main user-facing CLI (`jmp`, `j`)
-- **jumpstarter-cli-admin**: Administrative commands
-- **jumpstarter-cli-driver**: Driver development tools
-- **jumpstarter-cli-common**: Shared CLI utilities
+- **`jumpstarter-cli`**: Main user-facing CLI (`jmp` for general commands, `j` for driver commands within shell sessions)
+- **`jumpstarter-cli-admin`**: Administrative commands for managing the Jumpstarter Service
+- **`jumpstarter-cli-driver`**: Experimental driver package management CLI
+- **`jumpstarter-cli-common`**: Shared CLI utilities
 
 #### Hardware Drivers
 
-- **jumpstarter-driver-***: Device-specific drivers
-- Categories: power, communication, storage, debug, virtualization
-- Examples: energenie, pyserial, qemu, probe-rs
+- **`jumpstarter-driver-*`**: Driver Packages
+  - Categories: power, communication, storage, debug, virtualization
+  - Examples: energenie, pyserial, qemu, probe-rs
 
 #### Infrastructure
 
-- **jumpstarter-kubernetes**: Distributed mode controller
-- **jumpstarter-imagehash**: Image comparison utilities
-- **hatch-pin-jumpstarter**: Build system integration
+- **`jumpstarter-kubernetes`**: Python Kubernetes API definitions and functions for managing the Jumpstarter Service
+- **`jumpstarter-imagehash`**: Image comparison utilities
+- **`hatch-pin-jumpstarter`**: Build system integration
 
 ## Development Environment Setup
 
@@ -77,7 +77,7 @@ uv run jmp --help
 
 ### Development Tools
 
-#### Package Manager (UV)
+#### Package Manager (UV) and Makefile
 
 ```bash
 # Sync all packages and dependencies
@@ -96,7 +96,7 @@ make clean
 # Run all tests
 make test
 
-# Test specific package
+# Test a specific package
 make pkg-test-jumpstarter-driver-shell
 
 # Run type checking
@@ -128,11 +128,12 @@ make create-driver DRIVER_NAME=my_device DRIVER_CLASS=MyDevice
 
 # Implement driver logic
 # Edit packages/jumpstarter-driver-my-device/jumpstarter_driver_my_device/driver.py
+# Edit packages/jumpstarter-driver-my-device/jumpstarter_driver_my_device/client.py
 
 # Test driver
 make pkg-test-jumpstarter-driver-my-device
 
-# Verify integration
+# Verify integration with CLI tools
 uv run jmp shell --exporter-config ./packages/jumpstarter-driver-my-device/examples/exporter.yaml
 ```
 
@@ -142,7 +143,7 @@ uv run jmp shell --exporter-config ./packages/jumpstarter-driver-my-device/examp
 
 ```python
 # Driver unit tests
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_power_cycle():
     config = {"host": "localhost", "port": 8080}
     driver = MyDevice(config)

@@ -42,6 +42,20 @@ jmp config exporter list
 
 **Implementation**: `packages/jumpstarter-cli/jumpstarter_cli/config.py`
 
+#### Configuration File Hierarchy
+
+Jumpstarter loads configuration in the following order (highest to lowest priority):
+
+1. **Command-line options** (highest priority)
+2. **Environment variables**
+3. **Configuration files**:
+   - User configs: `~/.config/jumpstarter/clients/*.yaml`
+   - System configs: `/etc/jumpstarter/exporters/*.yaml`
+4. **Default values** (lowest priority)
+
+**Client Configuration Location**: `~/.config/jumpstarter/clients/`
+**Exporter Configuration Location**: `/etc/jumpstarter/exporters/`
+
 ### Device Interaction
 
 #### `jmp shell`
@@ -267,3 +281,40 @@ jmp get exporters --format yaml
 - `JMP_TOKEN` - Auth token (overrides config file)
 - `JMP_DRIVERS_ALLOW` - Comma-separated list of allowed driver namespaces
 - `JUMPSTARTER_FORCE_SYSTEM_CERTS` - Set to `1` to force system CA certificates
+
+## Connection URL Schemes
+
+Jumpstarter supports multiple URL schemes for connecting to different types of endpoints:
+
+### Local Connections
+
+- **`local`** - Connect to local exporter by name (looks up in `/etc/jumpstarter/exporters/`)
+- **`unix:///path/to/socket`** - Connect via Unix domain socket
+- **Path to config file** - Direct path to exporter YAML configuration
+
+### Remote Exporter Connections
+
+- **`exporter://hostname:port`** - Connect to remote exporter (insecure)
+- **`exporters://hostname:port`** - Connect to remote exporter with TLS encryption
+
+### Service Connections (Distributed Mode)
+
+- **`service://hostname`** - Connect through Jumpstarter service/controller
+- **`https://hostname`** - HTTPS connection to Jumpstarter service
+
+### Examples
+
+```bash
+# Local connections
+jmp shell --exporter my-device                    # By name
+jmp shell --exporter-config ./device.yaml        # By config file
+jmp shell --exporter unix:///tmp/jumpstarter.sock # Unix socket
+
+# Remote exporter
+jmp shell --exporter exporter://device.lab.com:5000      # Insecure
+jmp shell --exporter exporters://device.lab.com:5000     # TLS
+
+# Service connections
+jmp shell --endpoint service://jumpstarter.company.com   # Service
+jmp shell -l type=rpi,env=lab                           # Lease selector
+```

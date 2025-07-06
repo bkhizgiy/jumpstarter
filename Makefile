@@ -31,6 +31,8 @@ help:
 	@echo "  pkg-ty-<pkg>     - Run ty on a specific package"
 	@echo "  lint               - Run ruff linter"
 	@echo "  lint-fix           - Run ruff linter with auto-fix"
+	@echo "  lint-md            - Run markdownlint on markdown files"
+	@echo "  lint-md-fix        - Run markdownlint with auto-fix on markdown files"
 	@echo ""
 	@echo "Development targets:"
 	@echo "  create-driver      - Create a new driver package (prompts for inputs if not provided)"
@@ -121,10 +123,19 @@ lint:
 lint-fix:
 	uv run ruff check --fix
 
+lint-fix-only:
+	uv run ruff check --fix --unsafe-fixes --fix-only
+
+lint-md:
+	uv run pymarkdownlnt scan .
+
+lint-md-fix:
+	uv run pymarkdownlnt fix .
+
 .PHONY: default help docs docs-all docs-serve docs-serve-all docs-clean docs-test \
 	docs-linkcheck pkg-test-all pkg-ty-all build generate sync create-driver \
 	clean-venv clean-build clean-test clean-all test-all ty-all docs \
-	lint lint-fix \
+	lint lint-fix lint-md lint-md-fix \
 	pkg-ty-jumpstarter \
 	pkg-ty-jumpstarter-cli-admin \
 	pkg-ty-jumpstarter-kubernetes \
