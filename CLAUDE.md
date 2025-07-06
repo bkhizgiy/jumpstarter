@@ -1,4 +1,4 @@
-/m# Jumpstarter AI Context Documentation
+# Jumpstarter AI Context Documentation
 
 This file provides AI assistants with comprehensive context about the Jumpstarter project structure, architecture, and development patterns.
 
@@ -37,6 +37,8 @@ This file provides AI assistants with comprehensive context about the Jumpstarte
 ## Quick Reference
 
 ### Key Commands
+
+All `make` commands MUST be run in the project root directory.
 
 - `make sync` - Sync all packages and dependencies
 - `make build` - Build all packages

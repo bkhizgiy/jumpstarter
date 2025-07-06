@@ -399,6 +399,8 @@ Support debugging and development workflows:
 
 If the driver needs to inherit from other driver packages, make sure to add the dependency to the driver's `pyproject.toml`.
 
+Here are some common drivers packages to add:
+
 - `jumpstarter-driver-composite`: Base classes for building composite drivers.
 - `jumpstarter-driver-network`: Base classes and adapters for building network drivers.
 - `jumpstarter-driver-power`: Base classes for building power drivers.
