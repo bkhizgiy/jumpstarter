@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euxv
+set -e
 
 # accepted parameters are:
 # $1: driver name
@@ -12,7 +12,7 @@ prompt_with_default() {
     local prompt="$1"
     local default="$2"
     local varname="$3"
-    
+
     if [ -n "$default" ]; then
         echo "$prompt (default: $default):"
         read input
@@ -35,31 +35,24 @@ elif [ "$#" -eq 2 ]; then
     # Only driver name and class provided, auto-detect author info
     export DRIVER_NAME=$1
     export DRIVER_CLASS=$2
-    
+
     # Try to get author info from git config
-    GIT_NAME=$(git config user.name 2>/dev/null || echo "")
-    GIT_EMAIL=$(git config user.email 2>/dev/null || echo "")
-    
-    prompt_with_default "Author name" "$GIT_NAME" "AUTHOR_NAME"
-    prompt_with_default "Author email" "$GIT_EMAIL" "AUTHOR_EMAIL"
-    
-    export AUTHOR_NAME
-    export AUTHOR_EMAIL
+    export AUTHOR_NAME=$(git config user.name 2>/dev/null || echo "")
+    export AUTHOR_EMAIL=$(git config user.email 2>/dev/null || echo "")
 elif [ "$#" -eq 0 ]; then
     # Interactive mode - prompt for everything
     echo "Driver name (use underscores, e.g., my_usb_device):"
     read DRIVER_NAME
-    
+
     echo "Driver class name (PascalCase, e.g., MyUsbDevice):"
     read DRIVER_CLASS
-    
-    # Try to get author info from git config
-    GIT_NAME=$(git config user.name 2>/dev/null || echo "")
-    GIT_EMAIL=$(git config user.email 2>/dev/null || echo "")
-    
-    prompt_with_default "Author name" "$GIT_NAME" "AUTHOR_NAME"
-    prompt_with_default "Author email" "$GIT_EMAIL" "AUTHOR_EMAIL"
-    
+
+    echo "Author name (default: git config user.name):"
+    read AUTHOR_NAME
+
+    echo "Author email (default: git config user.email):"
+    read AUTHOR_EMAIL
+
     export DRIVER_NAME
     export DRIVER_CLASS
     export AUTHOR_NAME
@@ -218,3 +211,61 @@ EOF
 # Replace the original file with the modified version
 mv "${TEMP_FILE}" "${PYPROJECT_FILE}"
 echo "Added ${PACKAGE_NAME} to workspace sources"
+
+# Add the new driver to the jumpstarter-all package dependencies
+echo "Adding driver to jumpstarter-all package dependencies"
+JUMPSTARTER_ALL_PYPROJECT="packages/jumpstarter-all/pyproject.toml"
+
+# Create a temporary file to store the modified jumpstarter-all pyproject.toml
+TEMP_FILE_ALL=$(mktemp)
+
+# Read the jumpstarter-all pyproject.toml and insert the new driver in alphabetical order
+python3 << EOF
+import re
+
+# Read the jumpstarter-all pyproject.toml file
+with open('${JUMPSTARTER_ALL_PYPROJECT}', 'r') as f:
+    content = f.read()
+
+# Find the dependencies section
+deps_pattern = r'(dependencies = \[\n)(.*?)(\n\])'
+match = re.search(deps_pattern, content, re.DOTALL)
+
+if match:
+    # Get the parts: before dependencies, dependencies content, and after dependencies
+    before_deps = content[:match.start()]
+    deps_header = match.group(1)
+    deps_content = match.group(2)
+    after_deps = content[match.end(2):]
+    
+    # Parse existing dependencies
+    deps = []
+    for line in deps_content.strip().split('\n'):
+        if line.strip() and line.strip().startswith('"'):
+            # Extract package name from quoted string
+            package_name = line.strip().strip('",')
+            deps.append((package_name, line))
+    
+    # Add the new driver dependency
+    new_line = f'  "${PACKAGE_NAME}",'
+    deps.append(("${PACKAGE_NAME}", new_line))
+    
+    # Sort by package name
+    deps.sort(key=lambda x: x[0])
+    
+    # Reconstruct the dependencies section
+    new_deps_content = '\n'.join([line for _, line in deps])
+    
+    # Reconstruct the entire file
+    new_content = before_deps + deps_header + new_deps_content + after_deps
+    
+    with open('${TEMP_FILE_ALL}', 'w') as f:
+        f.write(new_content)
+else:
+    print("Error: Could not find dependencies section in jumpstarter-all pyproject.toml")
+    exit(1)
+EOF
+
+# Replace the original file with the modified version
+mv "${TEMP_FILE_ALL}" "${JUMPSTARTER_ALL_PYPROJECT}"
+echo "Added ${PACKAGE_NAME} to jumpstarter-all dependencies"

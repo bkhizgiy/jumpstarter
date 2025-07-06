@@ -1,4 +1,4 @@
-# Jumpstarter AI Context Documentation
+/m# Jumpstarter AI Context Documentation
 
 This file provides AI assistants with comprehensive context about the Jumpstarter project structure, architecture, and development patterns.
 
@@ -51,6 +51,8 @@ This file provides AI assistants with comprehensive context about the Jumpstarte
 - `packages/jumpstarter-protocol/` - gRPC definitions
 
 ### Common Development Tasks
+
+All make commands MUST be run in the root package directory. They cannot be run in driver package directories.
 
 - Create new driver: `make create-driver DRIVER_NAME=my_device DRIVER_CLASS=MyDevice`
 - Run tests: `make pkg-test-<package-name>`

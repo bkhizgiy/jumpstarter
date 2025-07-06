@@ -252,6 +252,8 @@ class MyDevice(Driver):
 
 Drivers can register children that will be exposed through a `jumpstarter_driver_composite.client.CompositeClient` or a class that inherits from it.
 
+Make sure to add the `jumpstarter-driver-composite` dependency to the driver's `pyproject.toml`.
+
 Custom composite client implementation:
 
 ```python
@@ -296,6 +298,8 @@ class MyDevice(Driver):
 ### Port Forwarding
 
 Sometimes it is necessary to port forward from the exporter host to the client. This can be accomplished by extending the `jumpstarter_driver_network.driver.TcpNetwork` driver class and the `jumpstarter_driver_network.adapters.TcpPortForwardAdapter`.
+
+Make sure to add the `jumpstarter-driver-network` dependency to the driver's `pyproject.toml`.
 
 Driver implementation:
 
@@ -359,6 +363,8 @@ class MyPortforwardClient(DriverClient):
 
 ### 1. Power Control Drivers
 
+Base interfaces and clients are provided by the `jumpstarter-driver-power` package.
+
 Manage device power states:
 
 - `on()`, `off()`, `cycle()`
@@ -388,6 +394,14 @@ Support debugging and development workflows:
 - Hardware debugging: probe-rs
 - Virtualization: qemu
 - Platform-specific: raspberrypi, corellium
+
+## Common Driver Packages
+
+If the driver needs to inherit from other driver packages, make sure to add the dependency to the driver's `pyproject.toml`.
+
+- `jumpstarter-driver-composite`: Base classes for building composite drivers.
+- `jumpstarter-driver-network`: Base classes and adapters for building network drivers.
+- `jumpstarter-driver-power`: Base classes for building power drivers.
 
 ## Testing Patterns
 

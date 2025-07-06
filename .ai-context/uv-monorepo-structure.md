@@ -93,6 +93,8 @@ To register Jumpstarter drivers, we use the `project.entry-points."jumpstarter.d
 
 Many `uv` commands have been abstracted into our `Makefile`.
 
+All `make` command MUST be run in the root project directory.
+
 Here are some useful `make` commands:
 
 - `make sync` - Runs a `uv` sync for all packages and all extras.

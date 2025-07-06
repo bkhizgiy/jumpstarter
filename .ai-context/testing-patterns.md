@@ -13,6 +13,7 @@ testing a framework that is designed to help with testing hardware.
 - We use `anyio` to mark `async` tests
   - If the entire file is async tests, use `pytestmark = pytest.mark.anyio`
   - If just a single test is async, use the `@pytest.mark.anyio` decorator
+  - We must add the `anyio_backend()` pytest fixture to set the backend as `asyncio`
 - Test should be organized as appropriate:
   - Simple tests cases are written as functions prefixed with `test_`, for example `def test_http_server():`
   - For more complex tests, use test classes to better organize test cases with the prefix `Test`, for example `class TestClusterCreation:`
